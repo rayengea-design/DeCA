@@ -36,14 +36,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cancel_url: `${origin}/app/facturacion?checkout=cancelado`,
       locale: 'es',
       allow_promotion_codes: true,
+      // Stripe enables "Managed Payments" (Stripe as merchant of record,
+      // handling tax collection/remittance) by default on newer accounts —
+      // it requires a tax_code on every Price and is a real business/legal
+      // decision (who the merchant of record is) that shouldn't be turned
+      // on as a side effect of a missing config value. Off until that's a
+      // deliberate choice.
+      managed_payments: { enabled: false },
     })
 
     return res.status(200).json({ url: session.url })
   } catch (err) {
     if (err instanceof ApiError) return res.status(err.status).json({ error: err.message })
     console.error('create-checkout-session error', err)
-    return res
-      .status(500)
-      .json({ error: 'No se pudo iniciar el pago', debug: err instanceof Error ? err.message : String(err) })
+    return res.status(500).json({ error: 'No se pudo iniciar el pago' })
   }
 }
