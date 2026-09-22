@@ -13,9 +13,12 @@ async function callBillingApi(path: string, user: User, body?: Record<string, un
   return data
 }
 
-export async function startCheckout(user: User, plan: SelfServePlanId): Promise<string> {
-  const { url } = await callBillingApi('/api/stripe/create-checkout-session', user, { plan })
-  return url as string
+/** Starts a new subscription without leaving the app — returns a Stripe
+ * PaymentIntent client secret to confirm with Elements (see
+ * components/billing/EmbeddedPayment.tsx). */
+export async function createSubscriptionIntent(user: User, plan: SelfServePlanId): Promise<string> {
+  const { clientSecret } = await callBillingApi('/api/stripe/create-subscription-intent', user, { plan })
+  return clientSecret as string
 }
 
 export async function openBillingPortal(user: User): Promise<string> {

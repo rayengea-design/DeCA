@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
+import { EmbeddedPayment } from '@/components/billing/EmbeddedPayment'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -12,7 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 import { daysUntilPeriodEnd, memberLimitFor, PLAN_NAMES, PLANS, WHATSAPP_CONTACT_URL } from '@/lib/plans'
 import { daysSinceSignup, isSubscribed, TRIAL_DAY_LIMIT, TRIAL_DOC_LIMIT } from '@/lib/trial'
 import { formatDate } from '@/lib/utils'
-import { changePlan, openBillingPortal, startCheckout } from '@/services/billingService'
+import { changePlan, createSubscriptionIntent, openBillingPortal } from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
 import type { SelfServePlanId } from '@/types/deca'
 
@@ -32,6 +33,8 @@ export function BillingPage() {
   const [redirecting, setRedirecting] = useState<SelfServePlanId | 'portal' | null>(null)
   const [billingError, setBillingError] = useState<string | null>(null)
   const [planChanged, setPlanChanged] = useState<SelfServePlanId | null>(null)
+  const [checkout, setCheckout] = useState<{ plan: SelfServePlanId; clientSecret: string } | null>(null)
+  const [paymentSucceeded, setPaymentSucceeded] = useState(false)
 
   const {
     register,
@@ -55,13 +58,21 @@ export function BillingPage() {
 
   async function handleChoosePlan(plan: SelfServePlanId) {
     setBillingError(null)
+    setPaymentSucceeded(false)
     setRedirecting(plan)
     try {
-      window.location.href = await startCheckout(user!, plan)
+      const clientSecret = await createSubscriptionIntent(user!, plan)
+      setCheckout({ plan, clientSecret })
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : 'No se pudo iniciar el pago.')
+    } finally {
       setRedirecting(null)
     }
+  }
+
+  function handlePaymentSuccess() {
+    setCheckout(null)
+    setPaymentSucceeded(true)
   }
 
   async function handleChangePlan(plan: SelfServePlanId) {
@@ -104,7 +115,7 @@ export function BillingPage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
-      {checkoutResult === 'exito' && (
+      {(checkoutResult === 'exito' || paymentSucceeded) && (
         <div className="flex items-center gap-2 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           Pago completado. Puede tardar unos segundos en reflejarse aquí.
@@ -284,7 +295,9 @@ export function BillingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{subscribed ? 'Cambiar de plan' : 'Elige un plan'}</CardTitle>
+          <CardTitle>
+            {checkout ? `Pagar plan ${PLAN_NAMES[checkout.plan]}` : subscribed ? 'Cambiar de plan' : 'Elige un plan'}
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {planChanged && (
@@ -293,52 +306,63 @@ export function BillingPage() {
               Plan cambiado a {PLAN_NAMES[planChanged]}. Puede tardar unos segundos en reflejarse aquí.
             </div>
           )}
-          <div className="grid gap-4 sm:grid-cols-3">
-            {PLANS.map((plan) => {
-              const isCurrent = subscribed && company.plan === plan.id
-              return (
-                <div
-                  key={plan.id}
-                  className={`flex flex-col rounded-lg border p-4 ${isCurrent ? 'border-brand-500 ring-1 ring-brand-500' : 'border-ink-100'}`}
+          {checkout ? (
+            <EmbeddedPayment
+              key={checkout.clientSecret}
+              clientSecret={checkout.clientSecret}
+              onSuccess={handlePaymentSuccess}
+              onCancel={() => setCheckout(null)}
+            />
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {PLANS.map((plan) => {
+                  const isCurrent = subscribed && company.plan === plan.id
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`flex flex-col rounded-lg border p-4 ${isCurrent ? 'border-brand-500 ring-1 ring-brand-500' : 'border-ink-100'}`}
+                    >
+                      <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
+                      <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
+                      <ul className="mt-3 flex flex-1 flex-col gap-1.5">
+                        {plan.features.map((f) => (
+                          <li key={f} className="text-xs text-ink-500">
+                            · {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        onClick={() => (subscribed ? handleChangePlan(plan.id) : handleChoosePlan(plan.id))}
+                        disabled={isCurrent || redirecting !== null || !hasFiscalInfo}
+                        className="mt-4"
+                        variant={isCurrent ? 'outline' : plan.id === 'flota' ? 'default' : 'outline'}
+                        title={!hasFiscalInfo ? 'Completa antes tus datos de facturación' : undefined}
+                      >
+                        {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {isCurrent ? 'Plan actual' : subscribed ? `Cambiar a ${plan.name}` : `Elegir ${plan.name}`}
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-center text-xs text-ink-400">
+                El IVA correspondiente se calcula y se muestra desglosado en el momento del pago.
+              </p>
+              <p className="text-center text-xs text-ink-400">
+                ¿Más de 50 conductores?{' '}
+                <a
+                  href={WHATSAPP_CONTACT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-brand-600 hover:underline"
                 >
-                  <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
-                  <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
-                  <ul className="mt-3 flex flex-1 flex-col gap-1.5">
-                    {plan.features.map((f) => (
-                      <li key={f} className="text-xs text-ink-500">
-                        · {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    onClick={() => (subscribed ? handleChangePlan(plan.id) : handleChoosePlan(plan.id))}
-                    disabled={isCurrent || redirecting !== null || !hasFiscalInfo}
-                    className="mt-4"
-                    variant={isCurrent ? 'outline' : plan.id === 'flota' ? 'default' : 'outline'}
-                    title={!hasFiscalInfo ? 'Completa antes tus datos de facturación' : undefined}
-                  >
-                    {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {isCurrent ? 'Plan actual' : subscribed ? `Cambiar a ${plan.name}` : `Elegir ${plan.name}`}
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-          <p className="text-center text-xs text-ink-400">
-            El IVA correspondiente se calcula y se muestra desglosado en el momento del pago.
-          </p>
-          <p className="text-center text-xs text-ink-400">
-            ¿Más de 50 conductores?{' '}
-            <a
-              href={WHATSAPP_CONTACT_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-brand-600 hover:underline"
-            >
-              Habla con nosotros
-            </a>{' '}
-            sobre el plan Flota+.
-          </p>
+                  Habla con nosotros
+                </a>{' '}
+                sobre el plan Flota+.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
