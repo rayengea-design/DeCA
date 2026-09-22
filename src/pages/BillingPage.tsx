@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
 import { memberLimitFor, PLAN_NAMES, PLANS } from '@/lib/plans'
 import { daysSinceSignup, isSubscribed, TRIAL_DAY_LIMIT, TRIAL_DOC_LIMIT } from '@/lib/trial'
-import { openBillingPortal, startCheckout } from '@/services/billingService'
+import { changePlan, openBillingPortal, startCheckout } from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
 import type { SelfServePlanId } from '@/types/deca'
 
@@ -30,6 +30,7 @@ export function BillingPage() {
   const [infoError, setInfoError] = useState<string | null>(null)
   const [redirecting, setRedirecting] = useState<SelfServePlanId | 'portal' | null>(null)
   const [billingError, setBillingError] = useState<string | null>(null)
+  const [planChanged, setPlanChanged] = useState<SelfServePlanId | null>(null)
 
   const {
     register,
@@ -48,6 +49,7 @@ export function BillingPage() {
   const checkoutResult = searchParams.get('checkout')
   const membersUsed = company.memberCount ?? 1
   const memberLimit = memberLimitFor(company)
+  const hasFiscalInfo = Boolean(nif && domicilio)
 
   async function handleChoosePlan(plan: SelfServePlanId) {
     setBillingError(null)
@@ -56,6 +58,20 @@ export function BillingPage() {
       window.location.href = await startCheckout(user!, plan)
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : 'No se pudo iniciar el pago.')
+      setRedirecting(null)
+    }
+  }
+
+  async function handleChangePlan(plan: SelfServePlanId) {
+    setBillingError(null)
+    setPlanChanged(null)
+    setRedirecting(plan)
+    try {
+      await changePlan(user!, plan)
+      setPlanChanged(plan)
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'No se pudo cambiar de plan.')
+    } finally {
       setRedirecting(null)
     }
   }
@@ -181,53 +197,16 @@ export function BillingPage() {
         </CardContent>
       </Card>
 
-      {!subscribed && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Elige un plan</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {PLANS.map((plan) => (
-                <div key={plan.id} className="flex flex-col rounded-lg border border-ink-100 p-4">
-                  <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
-                  <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
-                  <ul className="mt-3 flex flex-1 flex-col gap-1.5">
-                    {plan.features.map((f) => (
-                      <li key={f} className="text-xs text-ink-500">
-                        · {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    onClick={() => handleChoosePlan(plan.id)}
-                    disabled={redirecting !== null}
-                    className="mt-4"
-                    variant={plan.id === 'flota' ? 'default' : 'outline'}
-                  >
-                    {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Elegir {plan.name}
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <p className="text-center text-xs text-ink-400">
-              ¿Más de 50 conductores?{' '}
-              <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
-                Habla con nosotros
-              </a>{' '}
-              sobre el plan Flota+.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {(!nif || !domicilio) && (
+      {!hasFiscalInfo && (
         <Card>
           <CardHeader>
             <CardTitle>Completa los datos de facturación</CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="mb-4 text-sm text-ink-500">
+              Necesarios antes de suscribirte o cambiar de plan — son los datos con los que Stripe emite tus
+              facturas, para que puedas contabilizarlas.
+            </p>
             <form onSubmit={handleSubmit(onSubmitInfo)} className="flex flex-col gap-4">
               {infoError && (
                 <div className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
@@ -261,6 +240,58 @@ export function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{subscribed ? 'Cambiar de plan' : 'Elige un plan'}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {planChanged && (
+            <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              Plan cambiado a {PLAN_NAMES[planChanged]}. Puede tardar unos segundos en reflejarse aquí.
+            </div>
+          )}
+          <div className="grid gap-4 sm:grid-cols-3">
+            {PLANS.map((plan) => {
+              const isCurrent = subscribed && company.plan === plan.id
+              return (
+                <div
+                  key={plan.id}
+                  className={`flex flex-col rounded-lg border p-4 ${isCurrent ? 'border-brand-500 ring-1 ring-brand-500' : 'border-ink-100'}`}
+                >
+                  <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
+                  <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
+                  <ul className="mt-3 flex flex-1 flex-col gap-1.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="text-xs text-ink-500">
+                        · {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    onClick={() => (subscribed ? handleChangePlan(plan.id) : handleChoosePlan(plan.id))}
+                    disabled={isCurrent || redirecting !== null || !hasFiscalInfo}
+                    className="mt-4"
+                    variant={isCurrent ? 'outline' : plan.id === 'flota' ? 'default' : 'outline'}
+                    title={!hasFiscalInfo ? 'Completa antes tus datos de facturación' : undefined}
+                  >
+                    {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {isCurrent ? 'Plan actual' : subscribed ? `Cambiar a ${plan.name}` : `Elegir ${plan.name}`}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-center text-xs text-ink-400">
+            ¿Más de 50 conductores?{' '}
+            <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
+              Habla con nosotros
+            </a>{' '}
+            sobre el plan Flota+.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }

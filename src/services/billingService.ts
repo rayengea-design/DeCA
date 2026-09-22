@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth'
 import type { SelfServePlanId } from '@/types/deca'
 
-async function callBillingApi(path: string, user: User, body?: Record<string, unknown>): Promise<{ url: string }> {
+async function callBillingApi(path: string, user: User, body?: Record<string, unknown>): Promise<Record<string, unknown>> {
   const idToken = await user.getIdToken()
   const res = await fetch(path, {
     method: 'POST',
@@ -15,10 +15,14 @@ async function callBillingApi(path: string, user: User, body?: Record<string, un
 
 export async function startCheckout(user: User, plan: SelfServePlanId): Promise<string> {
   const { url } = await callBillingApi('/api/stripe/create-checkout-session', user, { plan })
-  return url
+  return url as string
 }
 
 export async function openBillingPortal(user: User): Promise<string> {
   const { url } = await callBillingApi('/api/stripe/create-portal-session', user)
-  return url
+  return url as string
+}
+
+export async function changePlan(user: User, plan: SelfServePlanId): Promise<void> {
+  await callBillingApi('/api/stripe/change-plan', user, { plan })
 }

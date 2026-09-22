@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { ensureStripeCustomer } from '../_lib/customerFiscalSync.js'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe.js'
 
@@ -12,17 +13,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { email, companyRef, company } = await requireCompanyAdmin(req)
+    // A subscription without NIF/domicilio on file would generate invoices
+    // the client can't actually book in their own accounting — required
+    // before any money changes hands, not just recommended.
+    if (!company.nif || !company.domicilio) {
+      return res.status(400).json({ error: 'Completa el NIF/CIF y el domicilio de tu empresa antes de suscribirte' })
+    }
+
     const stripe = await getStripe()
     const origin = `https://${req.headers.host}`
 
-    let customerId = company.stripeCustomerId as string | undefined
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email,
-        name: company.nombre,
-        metadata: { companyId: companyRef.id },
-      })
-      customerId = customer.id
+    const customerId = await ensureStripeCustomer(stripe, company.stripeCustomerId as string | undefined, email, {
+      nombre: company.nombre as string,
+      nif: company.nif as string,
+      domicilio: company.domicilio as string,
+    })
+    if (customerId !== company.stripeCustomerId) {
       await companyRef.update({ stripeCustomerId: customerId })
     }
 
