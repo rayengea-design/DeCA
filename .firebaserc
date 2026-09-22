@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "deca-8da69"
+  },
+  "targets": {
+    "deca-8da69": {
+      "storage": {
+        "default": [
+          "deca-8da69.firebasestorage.app"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

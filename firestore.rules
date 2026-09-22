@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // A disabled profile must lose access immediately, even from a session
+    // that is somehow still holding a not-yet-expired ID token — deleting
+    // the Firebase Auth account alone does not achieve that (see UserProfile
+    // .disabled doc comment), so this check is the actual enforcement point.
+    function isMember(companyId) {
+      let profile = myProfile();
+      return signedIn() && profile.companyId == companyId && profile.get('disabled', false) != true;
+    }
+
+    function isAdmin(companyId) {
+      return isMember(companyId) && myProfile().role == 'admin';
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin(resource.data.companyId));
+
+      // Two ways a profile document is created:
+      // 1. Self-signup: the first login after the platform admin creates
+      //    the Auth account (company-setup flow) — the new user creates
+      //    their own doc.
+      // 2. A company admin creating a driver/teammate account under their
+      //    own company — always role 'member', never 'admin'. Only the
+      //    platform admin, via the Firebase console, creates the first
+      //    admin of a company (see FIREBASE_SETUP.md).
+      allow create: if signedIn() && (
+        request.auth.uid == uid ||
+        (isAdmin(request.resource.data.companyId) && request.resource.data.role == 'member')
+      );
+
+      // Only an admin may toggle a teammate's `disabled` flag — nothing else
+      // about a profile (companyId, role, email...) can ever change, and an
+      // admin can't disable themselves (that would be an unrecoverable
+      // lockout with no one left to undo it).
+      allow update: if signedIn() && isAdmin(resource.data.companyId) &&
+        uid != request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disabled']);
+      allow delete: if false;
+    }
+
+    // A new company can be created by any signed-in user during signup
+    // (companyId is a fresh random id chosen client-side). After that, only
+    // members of that company may read/update it.
+    match /companies/{companyId} {
+      allow create: if signedIn();
+      allow read, update: if isMember(companyId);
+      allow delete: if false;
+
+      match /decaDocs/{docId} {
+        // Admins see every DeCA the company has ever issued; a regular team
+        // member (driver) only ever sees the ones they created themselves.
+        allow read: if isMember(companyId) &&
+          (isAdmin(companyId) || resource.data.createdBy == request.auth.uid);
+        allow create: if isMember(companyId) && request.resource.data.createdBy == request.auth.uid;
+        // Only `status`/`supersededBy` (correction flow) and `hidden`
+        // (show/hide from the history view) may change after creation — the
+        // legal document data itself must never be edited once generated,
+        // and it can never be deleted (DeCA must stay retrievable for the
+        // legally required 1-year retention period). Only the document's own
+        // creator or an admin may touch even those fields.
+        allow update: if isMember(companyId) &&
+          (isAdmin(companyId) || resource.data.createdBy == request.auth.uid) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'hidden', 'supersededBy']);
+        allow delete: if false;
+      }
+    }
+  }
+}

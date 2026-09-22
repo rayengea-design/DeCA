@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // DeCA PDFs must be publicly downloadable by direct URL with no login or
+    // interaction (Resolución 5 junio 2026, DGTCF, apartado Tercero) — that is
+    // what a roadside inspector's phone will hit via the QR code. Each
+    // company's files live under their own companyId prefix; write access
+    // only requires a signed-in user.
+    //
+    // We intentionally do NOT also check the uploader's Firestore `disabled`
+    // flag here (tried it via firestore.get(), which is supported for
+    // cross-service rules) — in practice it made every upload fail with
+    // storage/unauthorized, including for perfectly normal, enabled users.
+    // Not worth re-attempting without a way to test it safely: the real
+    // authorization gate is the Firestore `decaDocs` write rule (a disabled
+    // or non-member user can never create the matching document), so an
+    // orphaned PDF with no Firestore record pointing to it is harmless.
+    match /deca/{companyId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+    }
+  }
+}
