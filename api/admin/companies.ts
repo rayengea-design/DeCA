@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getAdminDb } from '../_lib/firebaseAdmin'
-import { ApiError } from '../_lib/requireCompanyAdmin'
-import { requirePlatformAdmin } from '../_lib/requirePlatformAdmin'
+import { getAdminDb } from '../_lib/firebaseAdmin.js'
+import { ApiError } from '../_lib/requireCompanyAdmin.js'
+import { requirePlatformAdmin } from '../_lib/requirePlatformAdmin.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })

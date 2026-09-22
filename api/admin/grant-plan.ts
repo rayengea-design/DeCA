@@ -1,8 +1,8 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getAdminDb } from '../_lib/firebaseAdmin'
-import { ApiError } from '../_lib/requireCompanyAdmin'
-import { requirePlatformAdmin } from '../_lib/requirePlatformAdmin'
+import { getAdminDb } from '../_lib/firebaseAdmin.js'
+import { ApiError } from '../_lib/requireCompanyAdmin.js'
+import { requirePlatformAdmin } from '../_lib/requirePlatformAdmin.js'
 
 const VALID_PLANS = ['basico', 'flota', 'empresa', 'flota_plus']
 

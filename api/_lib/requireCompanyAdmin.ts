@@ -1,5 +1,5 @@
 import type { VercelRequest } from '@vercel/node'
-import { getAdminAuth, getAdminDb } from './firebaseAdmin'
+import { getAdminAuth, getAdminDb } from './firebaseAdmin.js'
 
 export class ApiError extends Error {
   status: number

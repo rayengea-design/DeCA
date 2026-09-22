@@ -1,6 +1,6 @@
 import type { VercelRequest } from '@vercel/node'
-import { getAdminAuth } from './firebaseAdmin'
-import { ApiError } from './requireCompanyAdmin'
+import { getAdminAuth } from './firebaseAdmin.js'
+import { ApiError } from './requireCompanyAdmin.js'
 
 /** Platform-level admin (you, running DeCA as a business) — completely
  * separate from a company's own `role: 'admin'`. Allowlisted by email via

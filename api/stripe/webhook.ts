@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type Stripe from 'stripe'
-import { getAdminDb } from '../_lib/firebaseAdmin'
-import { getStripe, PRICE_IDS } from '../_lib/stripe'
+import { getAdminDb } from '../_lib/firebaseAdmin.js'
+import { getStripe, PRICE_IDS } from '../_lib/stripe.js'
 
 // Stripe signature verification needs the exact raw request body — Vercel's
 // default JSON body parsing would re-serialize it and break the signature.

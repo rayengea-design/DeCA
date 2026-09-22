@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin'
-import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe'
+import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
+import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
