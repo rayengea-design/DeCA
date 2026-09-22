@@ -50,11 +50,22 @@ service cloud.firestore {
     }
 
     // A new company can be created by any signed-in user during signup
-    // (companyId is a fresh random id chosen client-side). After that, only
-    // members of that company may read/update it.
+    // (companyId is a fresh random id chosen client-side) — must include
+    // exactly the fields the self-serve signup form collects, nothing more.
+    // Billing fields (plan, stripeCustomerId, ...) are added later by a
+    // trusted backend via the Admin SDK, which bypasses these rules
+    // entirely, so they must never be allowed here. After creation, only an
+    // admin may update the company's own basic info (not just any member —
+    // a regular driver has no business rewriting the tenant's billing
+    // identity), and only those same fields.
     match /companies/{companyId} {
-      allow create: if signedIn();
-      allow read, update: if isMember(companyId);
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt']) &&
+        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt']) &&
+        request.resource.data.id == companyId;
+      allow read: if isMember(companyId);
+      allow update: if isAdmin(companyId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'nif', 'domicilio']);
       allow delete: if false;
 
       match /decaDocs/{docId} {

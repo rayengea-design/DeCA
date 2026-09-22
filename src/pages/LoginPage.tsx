@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { z } from 'zod'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
@@ -73,6 +73,15 @@ export function LoginPage() {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Entrar
           </Button>
+          <Button type="button" variant="outline" disabled className="justify-center">
+            Continuar con Google (próximamente)
+          </Button>
+          <p className="text-center text-xs text-ink-400">
+            ¿No tienes cuenta?{' '}
+            <Link to="/registro" className="font-medium text-brand-600 hover:underline">
+              Regístrate
+            </Link>
+          </p>
         </form>
       </div>
     </div>

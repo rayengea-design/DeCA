@@ -65,6 +65,7 @@ interface PricingPlan {
   description: string
   features: string[]
   cta: string
+  href: string
   highlighted?: boolean
 }
 
@@ -76,6 +77,7 @@ const plans: PricingPlan[] = [
     description: 'Para autónomos y flotas pequeñas que empiezan con el DeCA.',
     features: ['Hasta 3 conductores', 'DeCA ilimitados', 'Historial y exportación CSV', 'Envío por WhatsApp'],
     cta: 'Empezar prueba gratis',
+    href: '/registro',
   },
   {
     name: 'Flota',
@@ -89,6 +91,7 @@ const plans: PricingPlan[] = [
       'Soporte prioritario',
     ],
     cta: 'Empezar prueba gratis',
+    href: '/registro',
     highlighted: true,
   },
   {
@@ -97,6 +100,7 @@ const plans: PricingPlan[] = [
     description: 'Para grupos logísticos con muchos conductores o necesidades propias.',
     features: ['Conductores ilimitados', 'Facturación a medida', 'Alta asistida del equipo', 'SLA dedicado'],
     cta: 'Hablar con nosotros',
+    href: 'mailto:info@gruponoveldisl.es',
   },
 ]
 
@@ -165,7 +169,7 @@ export function LandingPage() {
               <Link to="/login">Iniciar sesión</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to="/login">Prueba gratis</Link>
+              <Link to="/registro">Prueba gratis</Link>
             </Button>
           </div>
         </div>
@@ -187,13 +191,13 @@ export function LandingPage() {
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild size="lg">
-              <Link to="/login">Empieza gratis 14 días</Link>
+              <Link to="/registro">Empieza gratis</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
               <a href="#precios">Ver precios</a>
             </Button>
           </div>
-          <p className="text-sm text-ink-400">Sin tarjeta de crédito · Cancela cuando quieras</p>
+          <p className="text-sm text-ink-400">10 DeCA o 5 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
         </div>
       </section>
 
@@ -276,7 +280,7 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-heading text-3xl font-bold text-ink-900">Precios simples, sin sorpresas</h2>
-            <p className="mt-2 text-ink-500">14 días de prueba gratis en cualquier plan. Sin tarjeta de crédito.</p>
+            <p className="mt-2 text-ink-500">10 DeCA o 5 días de prueba gratis en cualquier plan. Sin tarjeta de crédito.</p>
           </div>
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
             {plans.map((plan) => (
@@ -307,7 +311,11 @@ export function LandingPage() {
                   ))}
                 </ul>
                 <Button asChild className="mt-6" variant={plan.highlighted ? 'default' : 'outline'}>
-                  <Link to="/login">{plan.cta}</Link>
+                  {plan.href.startsWith('mailto:') ? (
+                    <a href={plan.href}>{plan.cta}</a>
+                  ) : (
+                    <Link to={plan.href}>{plan.cta}</Link>
+                  )}
                 </Button>
               </div>
             ))}
@@ -333,16 +341,29 @@ export function LandingPage() {
             Da de alta tu empresa en menos de dos minutos y ten tu primer DeCA listo antes de terminar el café.
           </p>
           <Button asChild size="lg">
-            <Link to="/login">Empieza gratis 14 días</Link>
+            <Link to="/registro">Empieza gratis</Link>
           </Button>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-ink-100 bg-white py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-ink-400 sm:flex-row sm:px-6">
-          <Logo />
-          <p>© {new Date().getFullYear()} DeCA. Todos los derechos reservados.</p>
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 text-sm text-ink-400 sm:px-6">
+          <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
+            <Logo />
+            <nav className="flex items-center gap-4">
+              <Link to="/terminos" className="hover:text-ink-700">
+                Términos de Servicio
+              </Link>
+              <Link to="/privacidad" className="hover:text-ink-700">
+                Política de Privacidad
+              </Link>
+            </nav>
+          </div>
+          <div className="flex w-full flex-col items-center gap-1 border-t border-ink-100 pt-4 text-center text-xs sm:flex-row sm:justify-between sm:text-left">
+            <p>© {new Date().getFullYear()} DeCA. Todos los derechos reservados.</p>
+            <p>Grupo Noveldi SL · CIF B04414645 · Urbanización La Paloma 58, 30850 Totana (Murcia)</p>
+          </div>
         </div>
       </footer>
     </div>

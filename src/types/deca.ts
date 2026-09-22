@@ -15,6 +15,13 @@ export interface Company {
    * fixed once in a settings screen that would inevitably go stale. */
   nombre: string
   createdAt: string
+  /** Identidad fiscal fija del cliente, usada para facturación — distinta
+   * del NIF de cargador/transportista que se rellena en cada DeCA (ese sí
+   * puede variar por porte). Opcional por compatibilidad con empresas dadas
+   * de alta antes de que el alta pidiera estos datos (p. ej. desde la
+   * consola de Firebase). */
+  nif?: string
+  domicilio?: string
 }
 
 export interface UserProfile {

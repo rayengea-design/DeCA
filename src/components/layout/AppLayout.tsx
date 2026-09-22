@@ -1,4 +1,4 @@
-import { FileText, History, LogOut, Users } from 'lucide-react'
+import { CreditCard, FileText, History, LogOut, Users } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/context/AuthContext'
@@ -9,7 +9,10 @@ const baseNavItems = [
   { to: '/app/historial', label: 'Historial', icon: History, end: false },
 ]
 
-const adminNavItems = [{ to: '/app/equipo', label: 'Equipo', icon: Users, end: false }]
+const adminNavItems = [
+  { to: '/app/equipo', label: 'Equipo', icon: Users, end: false },
+  { to: '/app/facturacion', label: 'Facturación', icon: CreditCard, end: false },
+]
 
 export function AppLayout() {
   const { user, profile, company, logout } = useAuth()

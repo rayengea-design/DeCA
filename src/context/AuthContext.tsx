@@ -1,4 +1,10 @@
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth'
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  type User,
+} from 'firebase/auth'
 import { doc, getDoc, onSnapshot, runTransaction } from 'firebase/firestore'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { auth, db } from '@/config/firebase'
@@ -6,6 +12,8 @@ import type { Company, UserProfile } from '@/types/deca'
 
 interface CompanySetupInput {
   nombre: string
+  nif: string
+  domicilio: string
 }
 
 interface AuthContextValue {
@@ -14,6 +22,7 @@ interface AuthContextValue {
   company: Company | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  signup: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   setupCompany: (input: CompanySetupInput) => Promise<void>
 }
@@ -82,17 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password)
   }
 
+  async function signup(email: string, password: string) {
+    await createUserWithEmailAndPassword(auth, email, password)
+  }
+
   async function logout() {
     await signOut(auth)
   }
 
-  async function setupCompany({ nombre }: CompanySetupInput) {
+  async function setupCompany({ nombre, nif, domicilio }: CompanySetupInput) {
     if (!user) throw new Error('No hay ninguna sesión activa')
     const uid = user.uid
     const companyId = crypto.randomUUID()
     const newCompany: Company = {
       id: companyId,
       nombre,
+      nif,
+      domicilio,
       createdAt: new Date().toISOString(),
     }
     const newProfile: UserProfile = {
@@ -125,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, company, loading, login, logout, setupCompany }}>
+    <AuthContext.Provider value={{ user, profile, company, loading, login, signup, logout, setupCompany }}>
       {children}
     </AuthContext.Provider>
   )

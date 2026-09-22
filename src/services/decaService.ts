@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
+import { collection, doc, getCountFromServer, getDoc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
 import { ref, uploadBytes } from 'firebase/storage'
 import { db, storage, storageBucket } from '@/config/firebase'
 import { buildDecaPdf, buildSupersededNoticePdf, decaFileName } from '@/services/pdfGenerator'
@@ -146,6 +146,14 @@ export async function getDecaDocument(companyId: string, id: string): Promise<De
 
 export async function setDecaHidden(companyId: string, docId: string, hidden: boolean) {
   await setDoc(doc(decaCollection(companyId), docId), { hidden }, { merge: true })
+}
+
+/** Total de DeCA generados históricamente por la empresa (incluye
+ * correcciones, que también crean un documento nuevo) — usado para calcular
+ * el consumo del periodo de prueba gratuita. */
+export async function getDecaDocumentCount(companyId: string): Promise<number> {
+  const snap = await getCountFromServer(decaCollection(companyId))
+  return snap.data().count
 }
 
 export async function findActiveDecaByMatricula(companyId: string, matricula: string): Promise<DecaRecord[]> {
