@@ -1,6 +1,11 @@
 import { LegalLayout } from '@/components/layout/LegalLayout'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 
 export function PrivacyPage() {
+  useDocumentMeta(
+    'Política de Privacidad | DeCA',
+    'Política de Privacidad de DeCA: qué datos tratamos, con qué finalidad y cómo ejercer tus derechos.',
+  )
   return (
     <LegalLayout title="Política de Privacidad" updatedAt="22 de septiembre de 2026">
       <section>

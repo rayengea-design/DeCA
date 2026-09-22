@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /panel-admin
+Disallow: /configurar-empresa
+
+Sitemap: https://www.kreanex.es/sitemap.xml

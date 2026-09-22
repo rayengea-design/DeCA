@@ -2,6 +2,7 @@ import { CreditCard, FileText, History, LogOut, Users } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/context/AuthContext'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { cn } from '@/lib/utils'
 
 const baseNavItems = [
@@ -15,6 +16,7 @@ const adminNavItems = [
 ]
 
 export function AppLayout() {
+  useDocumentMeta('Panel | DeCA')
   const { user, profile, company, logout } = useAuth()
   const navItems = profile?.role === 'admin' ? [...baseNavItems, ...adminNavItems] : baseNavItems
 

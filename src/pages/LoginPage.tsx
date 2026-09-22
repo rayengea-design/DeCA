@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 
 const schema = z.object({
   email: z.string().email('Introduce un email válido'),
@@ -18,6 +19,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function LoginPage() {
+  useDocumentMeta('Iniciar sesión | DeCA', 'Inicia sesión en tu cuenta de DeCA para generar y gestionar tus documentos de control administrativo.')
   const { user, login, loginWithGoogle } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

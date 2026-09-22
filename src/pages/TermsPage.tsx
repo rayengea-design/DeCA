@@ -1,6 +1,8 @@
 import { LegalLayout } from '@/components/layout/LegalLayout'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 
 export function TermsPage() {
+  useDocumentMeta('Términos de Servicio | DeCA', 'Términos de Servicio de DeCA, operado por Grupo Noveldi SL.')
   return (
     <LegalLayout title="Términos de Servicio" updatedAt="22 de septiembre de 2026">
       <section>

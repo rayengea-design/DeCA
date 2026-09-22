@@ -1,12 +1,107 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#C0090E" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DeCA — Documento electrónico de Control Administrativo</title>
+
+    <title>DeCA online | Genera el Documento de Control Administrativo del transporte</title>
+    <meta
+      name="description"
+      content="Genera el DeCA (Documento electrónico de Control Administrativo), obligatorio desde el 5 de octubre de 2026 para transporte de mercancías por carretera en España. PDF oficial con QR de verificación en menos de un minuto, desde el móvil."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.kreanex.es/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DeCA" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:url" content="https://www.kreanex.es/" />
+    <meta property="og:title" content="DeCA online | Genera el Documento de Control Administrativo del transporte" />
+    <meta
+      property="og:description"
+      content="Obligatorio desde el 5 de octubre de 2026. Genera el DeCA de cada porte con QR de verificación en menos de un minuto, cumpliendo la Orden FOM/2861/2012 y la Resolución de la DGTCF."
+    />
+    <meta property="og:image" content="https://www.kreanex.es/pwa-512x512.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="DeCA online | Genera el Documento de Control Administrativo del transporte" />
+    <meta
+      name="twitter:description"
+      content="Obligatorio desde el 5 de octubre de 2026. Genera el DeCA de cada porte con QR de verificación en menos de un minuto."
+    />
+    <meta name="twitter:image" content="https://www.kreanex.es/pwa-512x512.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://www.kreanex.es/#organization",
+            "name": "Grupo Noveldi SL",
+            "url": "https://www.kreanex.es/",
+            "logo": "https://www.kreanex.es/pwa-512x512.png",
+            "taxID": "B04414645",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Urbanización La Paloma 58, Venta Melilla",
+              "addressLocality": "Totana",
+              "addressRegion": "Murcia",
+              "postalCode": "30850",
+              "addressCountry": "ES"
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://www.kreanex.es/#website",
+            "name": "DeCA",
+            "url": "https://www.kreanex.es/",
+            "inLanguage": "es-ES",
+            "publisher": { "@id": "https://www.kreanex.es/#organization" }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://www.kreanex.es/#webapp",
+            "name": "DeCA",
+            "url": "https://www.kreanex.es/",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "browserRequirements": "Requiere JavaScript",
+            "inLanguage": "es-ES",
+            "description": "Genera el Documento electrónico de Control Administrativo (DeCA) exigido por la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026 de la DGTCF para el transporte nacional de mercancías por carretera en España.",
+            "provider": { "@id": "https://www.kreanex.es/#organization" },
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Plan Básico",
+                "price": "19",
+                "priceCurrency": "EUR",
+                "url": "https://www.kreanex.es/#precios"
+              },
+              {
+                "@type": "Offer",
+                "name": "Plan Flota",
+                "price": "49",
+                "priceCurrency": "EUR",
+                "url": "https://www.kreanex.es/#precios"
+              },
+              {
+                "@type": "Offer",
+                "name": "Plan Empresa",
+                "price": "99",
+                "priceCurrency": "EUR",
+                "url": "https://www.kreanex.es/#precios"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 
 export function NotFoundPage() {
+  useDocumentMeta('Página no encontrada | DeCA')
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-ink-50 px-4 text-center">
       <Logo />

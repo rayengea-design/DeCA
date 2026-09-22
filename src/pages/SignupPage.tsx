@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 
 const schema = z
   .object({
@@ -26,6 +27,10 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 export function SignupPage() {
+  useDocumentMeta(
+    'Regístrate gratis | DeCA',
+    'Crea tu cuenta y empieza a generar el DeCA de cada porte en menos de un minuto. Prueba gratis, sin tarjeta de crédito.',
+  )
   const { user, signup, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
