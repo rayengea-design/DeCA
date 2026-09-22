@@ -11,7 +11,7 @@ export interface AdminCompanyRow {
   comped: boolean
   decaCount: number
   memberCount: number
-  hasStripeCustomer: boolean
+  stripeCustomerId: string | null
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean
 }

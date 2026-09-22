@@ -291,6 +291,7 @@ export function LandingPage() {
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-heading text-3xl font-bold text-ink-900">Precios simples, sin sorpresas</h2>
             <p className="mt-2 text-ink-500">10 DeCA o 5 días de prueba gratis en cualquier plan. Sin tarjeta de crédito.</p>
+            <p className="mt-1 text-xs text-ink-400">El IVA correspondiente se calcula y se muestra desglosado en el momento del pago.</p>
           </div>
           <div className="mt-10 grid gap-6 lg:grid-cols-4">
             {plans.map((plan) => (

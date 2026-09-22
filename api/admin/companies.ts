@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         comped: c.comped ?? false,
         decaCount: c.decaCount ?? 0,
         memberCount: c.memberCount ?? 1,
-        hasStripeCustomer: Boolean(c.stripeCustomerId),
+        stripeCustomerId: c.stripeCustomerId ?? null,
       }
     })
 

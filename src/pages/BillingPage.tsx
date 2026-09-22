@@ -325,6 +325,9 @@ export function BillingPage() {
             })}
           </div>
           <p className="text-center text-xs text-ink-400">
+            El IVA correspondiente se calcula y se muestra desglosado en el momento del pago.
+          </p>
+          <p className="text-center text-xs text-ink-400">
             ¿Más de 50 conductores?{' '}
             <a
               href={WHATSAPP_CONTACT_URL}

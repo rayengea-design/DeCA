@@ -1,4 +1,4 @@
-import { AlertCircle, Gift, Loader2, ShieldOff } from 'lucide-react'
+import { AlertCircle, ExternalLink, Gift, Loader2, ShieldOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
@@ -127,89 +127,135 @@ export function AdminPanelPage() {
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-ink-100 bg-white">
-            <table className="w-full min-w-[1050px] text-left text-sm">
-              <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
-                <tr>
-                  <th className="px-4 py-3">Empresa</th>
-                  <th className="px-4 py-3">Alta</th>
-                  <th className="px-4 py-3">Plan</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">Renovación</th>
-                  <th className="px-4 py-3">DeCA</th>
-                  <th className="px-4 py-3">Equipo</th>
-                  <th className="px-4 py-3">Regalar plan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((c) => (
-                  <tr key={c.id} className="border-b border-ink-50 last:border-0">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-ink-900">{c.nombre || '—'}</p>
-                      <p className="text-xs text-ink-400">{c.nif || 'Sin NIF'}</p>
-                    </td>
-                    <td className="px-4 py-3 text-ink-500">{c.createdAt ? formatDate(c.createdAt) : '—'}</td>
-                    <td className="px-4 py-3">
-                      {c.plan ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                          {PLAN_NAMES[c.plan]}
-                          {c.comped && ' (regalo)'}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
-                          Prueba
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-ink-500">{c.subscriptionStatus ?? '—'}</td>
-                    <td className="px-4 py-3 text-ink-500">
-                      {c.currentPeriodEnd ? (
-                        <>
-                          <p>{formatDate(c.currentPeriodEnd)}</p>
-                          <p className="text-xs text-ink-400">
-                            {c.cancelAtPeriodEnd ? 'Cancelada · ' : ''}
-                            {daysUntilPeriodEnd(c)} días
-                          </p>
-                        </>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-ink-500">{c.decaCount}</td>
-                    <td className="px-4 py-3 text-ink-500">{c.memberCount}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={selectedPlan[c.id] ?? 'basico'}
-                          onValueChange={(v) => setSelectedPlan((prev) => ({ ...prev, [c.id]: v as PlanId }))}
-                        >
-                          <SelectTrigger className="h-8 w-28 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {GRANTABLE_PLANS.map((p) => (
-                              <SelectItem key={p} value={p}>
-                                {PLAN_NAMES[p]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" variant="outline" disabled={pendingId === c.id} onClick={() => handleGrant(c.id)}>
-                          {pendingId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gift className="h-3.5 w-3.5" />}
-                          Regalar
-                        </Button>
-                        {c.comped && (
-                          <Button size="sm" variant="ghost" disabled={pendingId === c.id} onClick={() => handleRevoke(c.id)}>
-                            Quitar
-                          </Button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { label: 'Empresas', value: companies.length },
+                {
+                  label: 'Suscripciones activas',
+                  value: companies.filter((c) => c.subscriptionStatus === 'active' && !c.comped).length,
+                },
+                { label: 'Planes regalados', value: companies.filter((c) => c.comped).length },
+                {
+                  label: 'Pago pendiente',
+                  value: companies.filter((c) => c.subscriptionStatus === 'past_due').length,
+                },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-lg border border-ink-100 bg-white px-4 py-3">
+                  <p className="text-lg font-bold text-ink-900">{stat.value}</p>
+                  <p className="text-xs text-ink-400">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-ink-100 bg-white">
+              <table className="w-full min-w-[1050px] text-left text-sm">
+                <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
+                  <tr>
+                    <th className="px-4 py-3">Empresa</th>
+                    <th className="px-4 py-3">Alta</th>
+                    <th className="px-4 py-3">Plan</th>
+                    <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3">Renovación</th>
+                    <th className="px-4 py-3">DeCA</th>
+                    <th className="px-4 py-3">Equipo</th>
+                    <th className="px-4 py-3">Regalar plan</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {companies.map((c) => (
+                    <tr key={c.id} className="border-b border-ink-50 last:border-0">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-ink-900">{c.nombre || '—'}</p>
+                        <p className="text-xs text-ink-400">{c.nif || 'Sin NIF'}</p>
+                        {c.stripeCustomerId && (
+                          <a
+                            href={`https://dashboard.stripe.com/customers/${c.stripeCustomerId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-0.5 inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Ver en Stripe
+                          </a>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-ink-500">{c.createdAt ? formatDate(c.createdAt) : '—'}</td>
+                      <td className="px-4 py-3">
+                        {c.plan ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+                            {PLAN_NAMES[c.plan]}
+                            {c.comped && ' (regalo)'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+                            Prueba
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-ink-500">{c.subscriptionStatus ?? '—'}</td>
+                      <td className="px-4 py-3 text-ink-500">
+                        {c.currentPeriodEnd ? (
+                          <>
+                            <p>{formatDate(c.currentPeriodEnd)}</p>
+                            <p className="text-xs text-ink-400">
+                              {c.cancelAtPeriodEnd ? 'Cancelada · ' : ''}
+                              {daysUntilPeriodEnd(c)} días
+                            </p>
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-ink-500">{c.decaCount}</td>
+                      <td className="px-4 py-3 text-ink-500">{c.memberCount}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={selectedPlan[c.id] ?? 'basico'}
+                            onValueChange={(v) => setSelectedPlan((prev) => ({ ...prev, [c.id]: v as PlanId }))}
+                          >
+                            <SelectTrigger className="h-8 w-28 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {GRANTABLE_PLANS.map((p) => (
+                                <SelectItem key={p} value={p}>
+                                  {PLAN_NAMES[p]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={pendingId === c.id}
+                            onClick={() => handleGrant(c.id)}
+                          >
+                            {pendingId === c.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Gift className="h-3.5 w-3.5" />
+                            )}
+                            Regalar
+                          </Button>
+                          {c.comped && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={pendingId === c.id}
+                              onClick={() => handleRevoke(c.id)}
+                            >
+                              Quitar
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </main>
     </div>

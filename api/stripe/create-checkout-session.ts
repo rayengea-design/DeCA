@@ -42,6 +42,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cancel_url: `${origin}/app/facturacion?checkout=cancelado`,
       locale: 'es',
       allow_promotion_codes: true,
+      // Stripe Tax is already configured on this account (origin address +
+      // registro fiscal en España) — this makes Stripe calculate and itemize
+      // IVA on every invoice automatically, using the Customer's address
+      // (already set to Spain by ensureStripeCustomer above) to determine
+      // the rate. Without this, invoices carry no tax line at all.
+      automatic_tax: { enabled: true },
       // Stripe enables "Managed Payments" (Stripe as merchant of record,
       // handling tax collection/remittance) by default on newer accounts —
       // it requires a tax_code on every Price and is a real business/legal
