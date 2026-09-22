@@ -14,7 +14,7 @@ import {
 import { ref, uploadBytes } from 'firebase/storage'
 import { db, storage, storageBucket } from '@/config/firebase'
 import { buildDecaPdf, buildSupersededNoticePdf, decaFileName } from '@/services/pdfGenerator'
-import type { DecaFormValues, DecaRecord } from '@/types/deca'
+import type { Creator, DecaFormValues, DecaRecord } from '@/types/deca'
 
 function decaCollection(companyId: string) {
   return collection(db, 'companies', companyId, 'decaDocs')
@@ -28,12 +28,6 @@ export function getPublicUrl(storagePath: string) {
 interface CorrectionInfo {
   originalDocId: string
   reason: string
-}
-
-export interface Creator {
-  uid: string
-  email: string
-  nombre?: string
 }
 
 export async function createDecaDocument(

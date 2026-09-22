@@ -47,6 +47,23 @@ export async function shareDecaPdf(pdfUrl: string, fileName: string, label: stri
   window.open(buildWhatsAppShareUrl(pdfUrl, label), '_blank', 'noreferrer')
 }
 
+interface CreatorInfo {
+  createdBy?: string
+  createdByEmail?: string
+  createdByName?: string
+}
+
+/** "Creado por" display rule for saved trips/empresas: the company's
+ * original admin (Company.ownerUid) always shows their email — everyone
+ * else (drivers, or admins promoted later) shows their name, falling back
+ * to email only if they never set one. Returns null for records saved
+ * before creator tracking existed, or with no owner to compare against. */
+export function creatorLabel(item: CreatorInfo, ownerUid?: string): string | null {
+  if (!item.createdBy) return null
+  if (ownerUid && item.createdBy === ownerUid) return item.createdByEmail ?? null
+  return item.createdByName || item.createdByEmail || null
+}
+
 export function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('es-ES', {
     day: '2-digit',

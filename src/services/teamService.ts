@@ -1,5 +1,11 @@
 import { deleteApp, initializeApp } from 'firebase/app'
-import { createUserWithEmailAndPassword, getAuth, sendPasswordResetEmail, signOut } from 'firebase/auth'
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  sendPasswordResetEmail,
+  signOut,
+  type User,
+} from 'firebase/auth'
 import { collection, doc, getDocs, increment, query, updateDoc, where, writeBatch } from 'firebase/firestore'
 import { auth, db, firebaseConfig } from '@/config/firebase'
 import type { UserProfile } from '@/types/deca'
@@ -70,6 +76,27 @@ export async function setTeamMemberDisabled(companyId: string, uid: string, disa
  * their own role, so there's always at least one admin left standing. */
 export async function setTeamMemberRole(uid: string, role: 'admin' | 'member') {
   await updateDoc(doc(db, 'users', uid), { role })
+}
+
+/**
+ * Hard-deletes a driver's account (Auth + Firestore profile) via the
+ * team/delete-member API route — the client SDK can only ever delete
+ * auth.currentUser, never another user's account, so this genuinely needs a
+ * backend with the Admin SDK, unlike every other action in this file. Their
+ * DeCAs are never touched: decaDocs can't be deleted by any path
+ * (firestore.rules), and each record already has its creator's name/email
+ * denormalized onto it at creation time, so the history keeps showing who
+ * made it even after this.
+ */
+export async function deleteTeamMember(user: User, uid: string): Promise<void> {
+  const idToken = await user.getIdToken()
+  const res = await fetch('/api/team/delete-member', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ uid }),
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error ?? 'No se pudo eliminar la cuenta')
 }
 
 /**

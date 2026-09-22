@@ -6,6 +6,7 @@ import {
   Loader2,
   Plus,
   ShieldCheck,
+  Trash2,
   UserCog,
   UserX,
 } from 'lucide-react'
@@ -21,6 +22,7 @@ import { useAuth } from '@/context/AuthContext'
 import { memberLimitFor } from '@/lib/plans'
 import {
   createTeamMember,
+  deleteTeamMember,
   listCompanyUsers,
   sendTeamMemberPasswordReset,
   setTeamMemberDisabled,
@@ -116,6 +118,27 @@ export function TeamPage() {
       setMembers((prev) => prev.map((x) => (x.uid === m.uid ? { ...x, role: m.role === 'admin' ? 'member' : 'admin' } : x)))
     } catch {
       setError('No se pudo cambiar el rol. Inténtalo de nuevo.')
+    } finally {
+      setPendingUid(null)
+    }
+  }
+
+  async function handleDelete(m: UserProfile) {
+    if (!user) return
+    if (
+      !window.confirm(
+        `¿Eliminar la cuenta de ${m.nombre || m.email}? No podrá volver a iniciar sesión. Sus DeCA generados no se ven afectados — esto no se puede deshacer.`,
+      )
+    ) {
+      return
+    }
+    setPendingUid(m.uid)
+    setError(null)
+    try {
+      await deleteTeamMember(user, m.uid)
+      setMembers((prev) => prev.filter((x) => x.uid !== m.uid))
+    } catch {
+      setError('No se pudo eliminar la cuenta. Inténtalo de nuevo.')
     } finally {
       setPendingUid(null)
     }
@@ -263,6 +286,18 @@ export function TeamPage() {
                       >
                         {m.disabled ? <ShieldCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
                         {m.disabled ? 'Reactivar' : 'Desactivar'}
+                      </Button>
+                    )}
+                    {m.role !== 'admin' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pendingUid === m.uid}
+                        onClick={() => handleDelete(m)}
+                        title="Eliminar la cuenta permanentemente — sus DeCA no se ven afectados"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Eliminar
                       </Button>
                     )}
                   </div>

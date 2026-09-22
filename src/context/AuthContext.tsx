@@ -181,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
       decaCount: 0,
       memberCount: 1,
+      ownerUid: uid,
     }
     const newProfile: UserProfile = {
       uid,

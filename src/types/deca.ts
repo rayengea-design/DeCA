@@ -22,6 +22,13 @@ export interface Company {
    * fixed once in a settings screen that would inevitably go stale. */
   nombre: string
   createdAt: string
+  /** El admin original que dio de alta la empresa (vía /configurar-empresa),
+   * fijo desde entonces aunque más tarde se promocione a otros conductores a
+   * admin — distingue "el administrador principal" del resto de admins para
+   * decidir cómo se muestra su nombre en "creado por" (ver creatorLabel en
+   * lib/utils.ts). Opcional por compatibilidad con empresas dadas de alta
+   * antes de que este campo existiera. */
+  ownerUid?: string
   /** Identidad fiscal fija del cliente, usada para facturación — distinta
    * del NIF de cargador/transportista que se rellena en cada DeCA (ese sí
    * puede variar por porte). Opcional por compatibilidad con empresas dadas
@@ -74,6 +81,13 @@ export interface SavedTrip {
   naturalezaMercancia: string
   peso?: string
   createdAt: string
+  /** Denormalizado al crearlo (igual que en DecaRecord) para poder mostrar
+   * quién lo guardó incluso si esa cuenta se elimina más tarde — ver
+   * teamService.deleteTeamMember, que borra la cuenta pero nunca estos
+   * registros. Opcional: los guardados de antes de este campo no lo tienen. */
+  createdBy?: string
+  createdByEmail?: string
+  createdByName?: string
 }
 
 /** Una contraparte (cliente/proveedor) guardada de forma independiente de
@@ -87,6 +101,18 @@ export interface SavedCounterparty {
   nif: string
   domicilio?: string
   createdAt: string
+  /** Ver el mismo campo en SavedTrip. */
+  createdBy?: string
+  createdByEmail?: string
+  createdByName?: string
+}
+
+/** Quien generó/guardó algo — DeCA, viajes o empresas guardadas comparten
+ * esta misma forma para denormalizar "creado por" en el propio registro. */
+export interface Creator {
+  uid: string
+  email: string
+  nombre?: string
 }
 
 export interface UserProfile {

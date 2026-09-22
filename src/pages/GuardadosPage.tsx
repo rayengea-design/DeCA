@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
+import { creatorLabel } from '@/lib/utils'
 import {
   createSavedCounterparty,
   deleteSavedCounterparty,
@@ -16,7 +17,7 @@ import {
   updateSavedCounterparty,
 } from '@/services/counterpartyService'
 import { createSavedTrip, deleteSavedTrip, listSavedTrips, updateSavedTrip } from '@/services/tripService'
-import type { SavedCounterparty, SavedTrip } from '@/types/deca'
+import type { Creator, SavedCounterparty, SavedTrip } from '@/types/deca'
 
 const counterpartySchema = z.object({
   nombre: z.string().min(2, 'Obligatorio'),
@@ -39,19 +40,29 @@ type TripFormValues = z.infer<typeof tripSchema>
 
 export function GuardadosPage() {
   useDocumentMeta('Empresas y viajes guardados | DeCA')
-  const { company } = useAuth()
+  const { user, profile, company } = useAuth()
 
-  if (!company) return null
+  if (!company || !user) return null
+
+  const creator: Creator = { uid: user.uid, email: user.email ?? '', nombre: profile?.nombre }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
-      <CounterpartiesSection companyId={company.id} />
-      <SavedTripsSection companyId={company.id} />
+      <CounterpartiesSection companyId={company.id} ownerUid={company.ownerUid} creator={creator} />
+      <SavedTripsSection companyId={company.id} ownerUid={company.ownerUid} creator={creator} />
     </div>
   )
 }
 
-function CounterpartiesSection({ companyId }: { companyId: string }) {
+function CounterpartiesSection({
+  companyId,
+  ownerUid,
+  creator,
+}: {
+  companyId: string
+  ownerUid?: string
+  creator: Creator
+}) {
   const [items, setItems] = useState<SavedCounterparty[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -74,7 +85,7 @@ function CounterpartiesSection({ companyId }: { companyId: string }) {
   async function onCreate(values: CounterpartyFormValues) {
     setError(null)
     try {
-      const created = await createSavedCounterparty(companyId, values)
+      const created = await createSavedCounterparty(companyId, values, creator)
       setItems((prev) => [created, ...prev])
       reset()
     } catch {
@@ -177,6 +188,9 @@ function CounterpartiesSection({ companyId }: { companyId: string }) {
                       {item.nif}
                       {item.domicilio ? ` · ${item.domicilio}` : ''}
                     </p>
+                    {creatorLabel(item, ownerUid) && (
+                      <p className="truncate text-xs text-ink-300">Creado por: {creatorLabel(item, ownerUid)}</p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <Button
@@ -259,7 +273,15 @@ function EditableCounterpartyRow({
   )
 }
 
-function SavedTripsSection({ companyId }: { companyId: string }) {
+function SavedTripsSection({
+  companyId,
+  ownerUid,
+  creator,
+}: {
+  companyId: string
+  ownerUid?: string
+  creator: Creator
+}) {
   const [items, setItems] = useState<SavedTrip[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -283,7 +305,7 @@ function SavedTripsSection({ companyId }: { companyId: string }) {
   async function onCreate(values: TripFormValues) {
     setError(null)
     try {
-      const created = await createSavedTrip(companyId, values)
+      const created = await createSavedTrip(companyId, values, creator)
       setItems((prev) => [created, ...prev])
       reset()
       setShowAddForm(false)
@@ -420,6 +442,9 @@ function SavedTripsSection({ companyId }: { companyId: string }) {
                     <p className="truncate text-xs text-ink-400">
                       {item.counterpartNombre} · {item.origen} → {item.destino} · {item.naturalezaMercancia}
                     </p>
+                    {creatorLabel(item, ownerUid) && (
+                      <p className="truncate text-xs text-ink-300">Creado por: {creatorLabel(item, ownerUid)}</p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <Button

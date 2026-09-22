@@ -1,6 +1,6 @@
 import { collection, deleteDoc, doc, getDocs, orderBy, query, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '@/config/firebase'
-import type { SavedCounterparty } from '@/types/deca'
+import type { Creator, SavedCounterparty } from '@/types/deca'
 
 function savedCounterpartiesCollection(companyId: string) {
   return collection(db, 'companies', companyId, 'savedCounterparties')
@@ -13,10 +13,18 @@ export async function listSavedCounterparties(companyId: string): Promise<SavedC
 
 export async function createSavedCounterparty(
   companyId: string,
-  party: Omit<SavedCounterparty, 'id' | 'createdAt'>,
+  party: Omit<SavedCounterparty, 'id' | 'createdAt' | 'createdBy' | 'createdByEmail' | 'createdByName'>,
+  creator: Creator,
 ): Promise<SavedCounterparty> {
   const id = crypto.randomUUID()
-  const record: SavedCounterparty = { ...party, id, createdAt: new Date().toISOString() }
+  const record: SavedCounterparty = {
+    ...party,
+    id,
+    createdAt: new Date().toISOString(),
+    createdBy: creator.uid,
+    createdByEmail: creator.email,
+    ...(creator.nombre ? { createdByName: creator.nombre } : {}),
+  }
   await setDoc(doc(savedCounterpartiesCollection(companyId), id), record)
   return record
 }
@@ -24,7 +32,7 @@ export async function createSavedCounterparty(
 export async function updateSavedCounterparty(
   companyId: string,
   id: string,
-  party: Omit<SavedCounterparty, 'id' | 'createdAt'>,
+  party: Omit<SavedCounterparty, 'id' | 'createdAt' | 'createdBy' | 'createdByEmail' | 'createdByName'>,
 ): Promise<void> {
   await updateDoc(doc(savedCounterpartiesCollection(companyId), id), { ...party })
 }

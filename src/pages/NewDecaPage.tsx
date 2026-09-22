@@ -114,26 +114,36 @@ export function NewDecaPage() {
       setResult(record)
       setQrDataUrl(await QRCode.toDataURL(record.publicUrl, { margin: 1, width: 300 }))
 
+      const creator = { uid: user.uid, email: user.email ?? '', nombre: profile?.nombre }
+
       if (saveAsTrip && tripLabel.trim()) {
-        const saved = await createSavedTrip(company.id, {
-          nombre: tripLabel.trim(),
-          counterpartNombre: values.counterpartNombre,
-          counterpartNif: values.counterpartNif,
-          counterpartDomicilio: values.counterpartDomicilio,
-          origen: values.origen,
-          destino: values.destino,
-          naturalezaMercancia: values.naturalezaMercancia,
-          peso: values.peso,
-        })
+        const saved = await createSavedTrip(
+          company.id,
+          {
+            nombre: tripLabel.trim(),
+            counterpartNombre: values.counterpartNombre,
+            counterpartNif: values.counterpartNif,
+            counterpartDomicilio: values.counterpartDomicilio,
+            origen: values.origen,
+            destino: values.destino,
+            naturalezaMercancia: values.naturalezaMercancia,
+            peso: values.peso,
+          },
+          creator,
+        )
         setSavedTrips((prev) => [saved, ...prev])
       }
 
       if (saveCounterparty && !counterparties.some((c) => c.nif === values.counterpartNif)) {
-        const savedParty = await createSavedCounterparty(company.id, {
-          nombre: values.counterpartNombre,
-          nif: values.counterpartNif,
-          domicilio: values.counterpartDomicilio,
-        })
+        const savedParty = await createSavedCounterparty(
+          company.id,
+          {
+            nombre: values.counterpartNombre,
+            nif: values.counterpartNif,
+            domicilio: values.counterpartDomicilio,
+          },
+          creator,
+        )
         setCounterparties((prev) => [savedParty, ...prev])
       }
     } finally {

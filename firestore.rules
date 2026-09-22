@@ -107,11 +107,12 @@ service cloud.firestore {
     // identity), and only those same fields.
     match /companies/{companyId} {
       allow create: if signedIn() &&
-        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount', 'memberCount']) &&
-        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount', 'memberCount']) &&
+        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount', 'memberCount', 'ownerUid']) &&
+        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount', 'memberCount', 'ownerUid']) &&
         request.resource.data.id == companyId &&
         request.resource.data.decaCount == 0 &&
-        request.resource.data.memberCount == 1;
+        request.resource.data.memberCount == 1 &&
+        request.resource.data.ownerUid == request.auth.uid;
       allow read: if isMember(companyId);
       allow update: if isAdmin(companyId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'nif', 'domicilio']);
@@ -153,16 +154,22 @@ service cloud.firestore {
 
       // Saved trip presets (recurring counterpart/mercancía/ruta) are pure
       // user convenience, not legal document data — unlike decaDocs, any
-      // member can freely create, edit or delete their company's own, with
-      // no field-level lock.
+      // member can freely edit or delete their company's own, with no
+      // field-level lock. `createdBy` is checked only on create (so it can't
+      // be spoofed as someone else on the team), never on update — editing a
+      // saved trip never touches who originally created it.
       match /savedTrips/{tripId} {
-        allow read, create, update, delete: if isMember(companyId);
+        allow read, update, delete: if isMember(companyId);
+        allow create: if isMember(companyId) &&
+          (!('createdBy' in request.resource.data) || request.resource.data.createdBy == request.auth.uid);
       }
 
       // Saved counterparties (a client/proveedor's identity, reused across
       // many trips) — same open-CRUD convenience rule as savedTrips.
       match /savedCounterparties/{partyId} {
-        allow read, create, update, delete: if isMember(companyId);
+        allow read, update, delete: if isMember(companyId);
+        allow create: if isMember(companyId) &&
+          (!('createdBy' in request.resource.data) || request.resource.data.createdBy == request.auth.uid);
       }
     }
   }
