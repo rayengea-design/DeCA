@@ -2,6 +2,8 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -28,6 +30,7 @@ interface AuthContextValue {
   loginWithGoogle: () => Promise<User>
   logout: () => Promise<void>
   setupCompany: (input: CompanySetupInput) => Promise<void>
+  resetPassword: (email: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -95,7 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signup(email: string, password: string) {
-    await createUserWithEmailAndPassword(auth, email, password)
+    const credential = await createUserWithEmailAndPassword(auth, email, password)
+    // Best-effort — a signup shouldn't fail just because the verification
+    // email couldn't be sent (e.g. Firebase's own rate limit). Verified
+    // status matters for one thing only: requirePlatformAdmin.ts checks it
+    // before granting access to /panel-admin's backend, since Firebase
+    // Auth otherwise lets anyone create a password account under an email
+    // they don't own — without this, someone could self-register the
+    // platform admin's own email and claim that access first.
+    await sendEmailVerification(credential.user).catch(() => {})
+  }
+
+  async function resetPassword(email: string) {
+    await sendPasswordResetEmail(auth, email)
   }
 
   // Works for both signup and login — Firebase treats a Google sign-in as
@@ -156,7 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, company, loading, login, signup, loginWithGoogle, logout, setupCompany }}
+      value={{ user, profile, company, loading, login, signup, loginWithGoogle, logout, setupCompany, resetPassword }}
     >
       {children}
     </AuthContext.Provider>

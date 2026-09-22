@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { CHUNK_RELOAD_GUARD_KEY } from '@/components/ErrorBoundary'
 import { LandingPage } from '@/pages/LandingPage'
 
 function RouteFallback() {
@@ -51,6 +52,15 @@ function AuthLayout() {
 }
 
 export default function App() {
+  // Clears the ErrorBoundary's one-shot chunk-reload guard once the app has
+  // been running normally for a bit, so a genuinely broken deploy (not just
+  // stale chunks from one that happened while this tab was open) still ends
+  // up showing the fallback UI instead of reloading forever.
+  useEffect(() => {
+    const timer = setTimeout(() => sessionStorage.removeItem(CHUNK_RELOAD_GUARD_KEY), 10_000)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>

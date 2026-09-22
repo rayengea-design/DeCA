@@ -2,7 +2,7 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon\\.svg|apple-touch-icon\\.png|pwa-.*\\.png|manifest\\.webmanifest|sw\\.js|registerSW\\.js|workbox-.*\\.js|robots\\.txt|sitemap\\.xml).*)",
+      "source": "/((?!assets/|favicon\\.png|apple-touch-icon\\.png|pwa-.*\\.png|manifest\\.webmanifest|sw\\.js|registerSW\\.js|workbox-.*\\.js|robots\\.txt|sitemap\\.xml).*)",
       "destination": "/index.html"
     }
   ]

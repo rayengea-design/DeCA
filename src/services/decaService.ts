@@ -176,12 +176,3 @@ export async function getDecaDocumentCount(companyId: string): Promise<number> {
   return snap.data().count
 }
 
-export async function findActiveDecaByMatricula(companyId: string, matricula: string): Promise<DecaRecord[]> {
-  const q = query(
-    decaCollection(companyId),
-    where('matriculaTractora', '==', matricula),
-    where('status', '==', 'active'),
-  )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => d.data() as DecaRecord)
-}

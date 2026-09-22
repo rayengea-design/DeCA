@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate } from 'react-router-dom'
 import { z } from 'zod'
@@ -20,10 +20,14 @@ type FormValues = z.infer<typeof schema>
 
 export function LoginPage() {
   useDocumentMeta('Iniciar sesión | DeCA', 'Inicia sesión en tu cuenta de DeCA para generar y gestionar tus documentos de control administrativo.')
-  const { user, login, loginWithGoogle } = useAuth()
+  const { user, login, loginWithGoogle, resetPassword } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [mode, setMode] = useState<'login' | 'reset'>('login')
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSubmitting, setResetSubmitting] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const {
     register,
@@ -56,6 +60,76 @@ export function LoginPage() {
     }
   }
 
+  async function handleReset(e: FormEvent) {
+    e.preventDefault()
+    setResetSubmitting(true)
+    try {
+      await resetPassword(resetEmail.trim())
+    } catch {
+      // Deliberately silent: showing the same "sent" state whether or not
+      // the email exists avoids leaking which emails have an account here.
+    } finally {
+      setResetSubmitting(false)
+      setResetSent(true)
+    }
+  }
+
+  if (mode === 'reset') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink-50 px-4">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex flex-col items-center gap-3">
+            <Logo />
+            <p className="text-sm text-ink-400">Recupera el acceso a tu cuenta</p>
+          </div>
+          {resetSent ? (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-ink-100 bg-white p-6 text-center shadow-sm">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <p className="text-sm text-ink-700">
+                Si existe una cuenta con ese email, te hemos enviado un enlace para restablecer la
+                contraseña. Revisa tu bandeja de entrada (y spam).
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setMode('login')
+                  setResetSent(false)
+                }}
+              >
+                Volver a iniciar sesión
+              </Button>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleReset}
+              className="flex flex-col gap-4 rounded-lg border border-ink-100 bg-white p-6 shadow-sm"
+            >
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="resetEmail">Email de tu cuenta</Label>
+                <Input
+                  id="resetEmail"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                />
+              </div>
+              <Button type="submit" disabled={resetSubmitting} className="mt-2">
+                {resetSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                Enviar enlace de recuperación
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setMode('login')}>
+                Volver a iniciar sesión
+              </Button>
+            </form>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-ink-50 px-4">
       <div className="w-full max-w-sm">
@@ -79,7 +153,16 @@ export function LoginPage() {
             {errors.email && <p className="text-xs text-brand-600">{errors.email.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Contraseña</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Contraseña</Label>
+              <button
+                type="button"
+                onClick={() => setMode('reset')}
+                className="text-xs font-medium text-brand-600 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
             <Input id="password" type="password" autoComplete="current-password" {...register('password')} />
             {errors.password && <p className="text-xs text-brand-600">{errors.password.message}</p>}
           </div>
