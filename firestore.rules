@@ -158,6 +158,12 @@ service cloud.firestore {
       match /savedTrips/{tripId} {
         allow read, create, update, delete: if isMember(companyId);
       }
+
+      // Saved counterparties (a client/proveedor's identity, reused across
+      // many trips) — same open-CRUD convenience rule as savedTrips.
+      match /savedCounterparties/{partyId} {
+        allow read, create, update, delete: if isMember(companyId);
+      }
     }
   }
 }

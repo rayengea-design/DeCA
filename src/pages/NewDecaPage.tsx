@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Bookmark, CheckCircle2, Copy, Download, Loader2, MessageCircle, Plus } from 'lucide-react'
+import { Bookmark, CheckCircle2, Copy, Download, Loader2, MessageCircle, Plus, Settings2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { DecaFormFields } from '@/components/deca/DecaFormFields'
 import { MissingCompanyInfoNotice } from '@/components/MissingCompanyInfoNotice'
 import { TrialExhaustedNotice } from '@/components/TrialExhaustedNotice'
@@ -15,10 +16,11 @@ import { useAuth } from '@/context/AuthContext'
 import { decaFormSchema, type DecaFormFieldValues } from '@/lib/decaFormSchema'
 import { isTrialExhausted } from '@/lib/trial'
 import { shareDecaPdf } from '@/lib/utils'
+import { createSavedCounterparty, listSavedCounterparties } from '@/services/counterpartyService'
 import { createDecaDocument } from '@/services/decaService'
 import { decaFileName } from '@/services/pdfGenerator'
 import { createSavedTrip, listSavedTrips } from '@/services/tripService'
-import type { DecaRecord, SavedTrip } from '@/types/deca'
+import type { DecaRecord, SavedCounterparty, SavedTrip } from '@/types/deca'
 
 export function NewDecaPage() {
   const { user, profile, company } = useAuth()
@@ -28,8 +30,10 @@ export function NewDecaPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
   const [savedTrips, setSavedTrips] = useState<SavedTrip[]>([])
+  const [counterparties, setCounterparties] = useState<SavedCounterparty[]>([])
   const [saveAsTrip, setSaveAsTrip] = useState(false)
   const [tripLabel, setTripLabel] = useState('')
+  const [saveCounterparty, setSaveCounterparty] = useState(false)
 
   const {
     register,
@@ -37,6 +41,7 @@ export function NewDecaPage() {
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<DecaFormFieldValues>({
     resolver: zodResolver(decaFormSchema),
@@ -51,7 +56,12 @@ export function NewDecaPage() {
   useEffect(() => {
     if (!company) return
     listSavedTrips(company.id).then(setSavedTrips)
+    listSavedCounterparties(company.id).then(setCounterparties)
   }, [company])
+
+  const origenSuggestions = [...new Set(savedTrips.map((t) => t.origen).filter(Boolean))]
+  const destinoSuggestions = [...new Set(savedTrips.map((t) => t.destino).filter(Boolean))]
+  const mercanciaSuggestions = [...new Set(savedTrips.map((t) => t.naturalezaMercancia).filter(Boolean))]
 
   if (company && isTrialExhausted(company)) return <TrialExhaustedNotice />
   if (company && (!company.nif || !company.domicilio)) return <MissingCompanyInfoNotice />
@@ -119,6 +129,15 @@ export function NewDecaPage() {
         })
         setSavedTrips((prev) => [saved, ...prev])
       }
+
+      if (saveCounterparty && !counterparties.some((c) => c.nif === values.counterpartNif)) {
+        const savedParty = await createSavedCounterparty(company.id, {
+          nombre: values.counterpartNombre,
+          nif: values.counterpartNif,
+          domicilio: values.counterpartDomicilio,
+        })
+        setCounterparties((prev) => [savedParty, ...prev])
+      }
     } finally {
       setSubmitting(false)
     }
@@ -144,6 +163,7 @@ export function NewDecaPage() {
     setQrDataUrl(null)
     setSaveAsTrip(false)
     setTripLabel('')
+    setSaveCounterparty(false)
     reset({ ownRole: role, fechaTransporte: new Date().toISOString().slice(0, 10) })
   }
 
@@ -205,30 +225,49 @@ export function NewDecaPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="mx-auto flex max-w-2xl flex-col gap-5">
-      {savedTrips.length > 0 && (
+      {(savedTrips.length > 0 || counterparties.length > 0) && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle>Viaje recurrente</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/app/guardados">
+                <Settings2 className="h-3.5 w-3.5" />
+                Gestionar guardados
+              </Link>
+            </Button>
           </CardHeader>
-          <CardContent>
-            <Select onValueChange={applySavedTrip}>
-              <SelectTrigger>
-                <SelectValue placeholder="Rellenar desde un viaje guardado…" />
-              </SelectTrigger>
-              <SelectContent>
-                {savedTrips.map((trip) => (
-                  <SelectItem key={trip.id} value={trip.id}>
-                    {trip.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
+          {savedTrips.length > 0 && (
+            <CardContent>
+              <Select onValueChange={applySavedTrip}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Rellenar desde un viaje guardado…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedTrips.map((trip) => (
+                    <SelectItem key={trip.id} value={trip.id}>
+                      {trip.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          )}
         </Card>
       )}
 
       {company && (
-        <DecaFormFields register={register} control={control} errors={errors} role={role} company={company} />
+        <DecaFormFields
+          register={register}
+          control={control}
+          setValue={setValue}
+          errors={errors}
+          role={role}
+          company={company}
+          counterparties={counterparties}
+          origenSuggestions={origenSuggestions}
+          destinoSuggestions={destinoSuggestions}
+          mercanciaSuggestions={mercanciaSuggestions}
+        />
       )}
 
       <Card>
@@ -253,6 +292,15 @@ export function NewDecaPage() {
               />
             </div>
           )}
+          <label className="flex items-center gap-2 text-sm text-ink-600">
+            <input
+              type="checkbox"
+              checked={saveCounterparty}
+              onChange={(e) => setSaveCounterparty(e.target.checked)}
+            />
+            <Bookmark className="h-4 w-4 text-ink-400" />
+            Guardar esta empresa para autocompletarla la próxima vez
+          </label>
         </CardContent>
       </Card>
 

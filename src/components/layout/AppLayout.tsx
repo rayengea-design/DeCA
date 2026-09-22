@@ -1,4 +1,4 @@
-import { CreditCard, FileText, History, LogOut, Users } from 'lucide-react'
+import { Bookmark, CreditCard, FileText, History, LogOut, Users } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { useAuth } from '@/context/AuthContext'
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 const baseNavItems = [
   { to: '/app', label: 'Nuevo DeCA', icon: FileText, end: true },
   { to: '/app/historial', label: 'Historial', icon: History, end: false },
+  { to: '/app/guardados', label: 'Guardados', icon: Bookmark, end: false },
 ]
 
 const adminNavItems = [

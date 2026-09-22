@@ -13,8 +13,10 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useAuth } from '@/context/AuthContext'
 import { decaFormSchema, type DecaFormFieldValues } from '@/lib/decaFormSchema'
 import { isTrialExhausted } from '@/lib/trial'
+import { listSavedCounterparties } from '@/services/counterpartyService'
 import { correctDecaDocument, getDecaDocument } from '@/services/decaService'
-import type { DecaRecord } from '@/types/deca'
+import { listSavedTrips } from '@/services/tripService'
+import type { DecaRecord, SavedCounterparty, SavedTrip } from '@/types/deca'
 
 export function CorrectDecaPage() {
   const { id } = useParams<{ id: string }>()
@@ -25,6 +27,8 @@ export function CorrectDecaPage() {
   const [submitting, setSubmitting] = useState(false)
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string | null>(null)
+  const [counterparties, setCounterparties] = useState<SavedCounterparty[]>([])
+  const [savedTrips, setSavedTrips] = useState<SavedTrip[]>([])
 
   const {
     register,
@@ -32,10 +36,21 @@ export function CorrectDecaPage() {
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<DecaFormFieldValues>({ resolver: zodResolver(decaFormSchema) })
 
   const role = watch('ownRole')
+
+  useEffect(() => {
+    if (!company) return
+    listSavedCounterparties(company.id).then(setCounterparties)
+    listSavedTrips(company.id).then(setSavedTrips)
+  }, [company])
+
+  const origenSuggestions = [...new Set(savedTrips.map((t) => t.origen).filter(Boolean))]
+  const destinoSuggestions = [...new Set(savedTrips.map((t) => t.destino).filter(Boolean))]
+  const mercanciaSuggestions = [...new Set(savedTrips.map((t) => t.naturalezaMercancia).filter(Boolean))]
 
   useEffect(() => {
     if (!company || !id) return
@@ -178,7 +193,18 @@ export function CorrectDecaPage() {
       </Card>
 
       {company && (
-        <DecaFormFields register={register} control={control} errors={errors} role={role} company={company} />
+        <DecaFormFields
+          register={register}
+          control={control}
+          setValue={setValue}
+          errors={errors}
+          role={role}
+          company={company}
+          counterparties={counterparties}
+          origenSuggestions={origenSuggestions}
+          destinoSuggestions={destinoSuggestions}
+          mercanciaSuggestions={mercanciaSuggestions}
+        />
       )}
 
       <div className="flex gap-3">

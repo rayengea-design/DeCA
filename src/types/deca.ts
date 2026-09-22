@@ -76,6 +76,19 @@ export interface SavedTrip {
   createdAt: string
 }
 
+/** Una contraparte (cliente/proveedor) guardada de forma independiente de
+ * cualquier viaje concreto — el mismo cliente habitual puede repetirse en
+ * rutas y mercancías distintas, así que su identidad fiscal se guarda una
+ * vez y se reutiliza por autocompletado en cualquier DeCA nuevo. Igual que
+ * SavedTrip, es conveniencia pura: se puede editar o borrar libremente. */
+export interface SavedCounterparty {
+  id: string
+  nombre: string
+  nif: string
+  domicilio?: string
+  createdAt: string
+}
+
 export interface UserProfile {
   uid: string
   email: string

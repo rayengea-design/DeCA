@@ -1,21 +1,45 @@
-import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form'
+import type { Control, FieldErrors, UseFormRegister, UseFormSetValue } from 'react-hook-form'
 import { Controller } from 'react-hook-form'
+import { Autocomplete } from '@/components/ui/Autocomplete'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import type { DecaFormFieldValues } from '@/lib/decaFormSchema'
-import type { Company, PartyRole } from '@/types/deca'
+import type { Company, PartyRole, SavedCounterparty } from '@/types/deca'
 
 interface DecaFormFieldsProps {
   register: UseFormRegister<DecaFormFieldValues>
   control: Control<DecaFormFieldValues>
+  setValue: UseFormSetValue<DecaFormFieldValues>
   errors: FieldErrors<DecaFormFieldValues>
   role: PartyRole
   company: Company
+  counterparties: SavedCounterparty[]
+  origenSuggestions: string[]
+  destinoSuggestions: string[]
+  mercanciaSuggestions: string[]
 }
 
-export function DecaFormFields({ register, control, errors, role, company }: DecaFormFieldsProps) {
+export function DecaFormFields({
+  register,
+  control,
+  setValue,
+  errors,
+  role,
+  company,
+  counterparties,
+  origenSuggestions,
+  destinoSuggestions,
+  mercanciaSuggestions,
+}: DecaFormFieldsProps) {
+  function applyCounterparty(nombre: string) {
+    const match = counterparties.find((c) => c.nombre === nombre)
+    if (!match) return
+    setValue('counterpartNif', match.nif)
+    setValue('counterpartDomicilio', match.domicilio ?? '')
+  }
+
   return (
     <>
       <Card>
@@ -92,7 +116,21 @@ export function DecaFormFields({ register, control, errors, role, company }: Dec
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="counterpartNombre">Nombre / Razón social</Label>
-            <Input id="counterpartNombre" {...register('counterpartNombre')} />
+            <Controller
+              name="counterpartNombre"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  id="counterpartNombre"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onPickSuggestion={applyCounterparty}
+                  onBlur={field.onBlur}
+                  suggestions={counterparties.map((c) => c.nombre)}
+                  placeholder="Empieza a escribir para ver empresas guardadas…"
+                />
+              )}
+            />
             {errors.counterpartNombre && (
               <p className="text-xs text-brand-600">{errors.counterpartNombre.message}</p>
             )}
@@ -116,17 +154,53 @@ export function DecaFormFields({ register, control, errors, role, company }: Dec
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="origen">Origen</Label>
-            <Input id="origen" {...register('origen')} />
+            <Controller
+              name="origen"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  id="origen"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  suggestions={origenSuggestions}
+                />
+              )}
+            />
             {errors.origen && <p className="text-xs text-brand-600">{errors.origen.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="destino">Destino</Label>
-            <Input id="destino" {...register('destino')} />
+            <Controller
+              name="destino"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  id="destino"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  suggestions={destinoSuggestions}
+                />
+              )}
+            />
             {errors.destino && <p className="text-xs text-brand-600">{errors.destino.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="naturalezaMercancia">Naturaleza de la mercancía</Label>
-            <Input id="naturalezaMercancia" {...register('naturalezaMercancia')} />
+            <Controller
+              name="naturalezaMercancia"
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  id="naturalezaMercancia"
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  suggestions={mercanciaSuggestions}
+                />
+              )}
+            />
             {errors.naturalezaMercancia && (
               <p className="text-xs text-brand-600">{errors.naturalezaMercancia.message}</p>
             )}

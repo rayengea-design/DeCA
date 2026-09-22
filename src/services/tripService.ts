@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDocs, orderBy, query, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '@/config/firebase'
 import type { SavedTrip } from '@/types/deca'
 
@@ -16,6 +16,14 @@ export async function createSavedTrip(companyId: string, trip: Omit<SavedTrip, '
   const record: SavedTrip = { ...trip, id, createdAt: new Date().toISOString() }
   await setDoc(doc(savedTripsCollection(companyId), id), record)
   return record
+}
+
+export async function updateSavedTrip(
+  companyId: string,
+  id: string,
+  trip: Omit<SavedTrip, 'id' | 'createdAt'>,
+): Promise<void> {
+  await updateDoc(doc(savedTripsCollection(companyId), id), { ...trip })
 }
 
 export async function deleteSavedTrip(companyId: string, id: string): Promise<void> {

@@ -23,6 +23,7 @@ const AdminPanelPage = lazy(() => import('@/pages/admin/AdminPanelPage').then((m
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
 const CompanySetupPage = lazy(() => import('@/pages/CompanySetupPage').then((m) => ({ default: m.CompanySetupPage })))
 const CorrectDecaPage = lazy(() => import('@/pages/CorrectDecaPage').then((m) => ({ default: m.CorrectDecaPage })))
+const GuardadosPage = lazy(() => import('@/pages/GuardadosPage').then((m) => ({ default: m.GuardadosPage })))
 const HistoryPage = lazy(() => import('@/pages/HistoryPage').then((m) => ({ default: m.HistoryPage })))
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const NewDecaPage = lazy(() => import('@/pages/NewDecaPage').then((m) => ({ default: m.NewDecaPage })))
@@ -67,6 +68,7 @@ export default function App() {
                 <Route index element={<NewDecaPage />} />
                 <Route path="historial" element={<HistoryPage />} />
                 <Route path="historial/:id/corregir" element={<CorrectDecaPage />} />
+                <Route path="guardados" element={<GuardadosPage />} />
                 <Route path="equipo" element={<TeamPage />} />
                 <Route path="facturacion" element={<BillingPage />} />
               </Route>
