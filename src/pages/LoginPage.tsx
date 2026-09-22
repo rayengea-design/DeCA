@@ -18,9 +18,10 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, login, loginWithGoogle } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const {
     register,
@@ -39,6 +40,17 @@ export function LoginPage() {
       setError('Email o contraseña incorrectos.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setGoogleLoading(true)
+    try {
+      await loginWithGoogle()
+    } catch {
+      setError('No se pudo iniciar sesión con Google. Inténtalo de nuevo.')
+      setGoogleLoading(false)
     }
   }
 
@@ -73,8 +85,15 @@ export function LoginPage() {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Entrar
           </Button>
-          <Button type="button" variant="outline" disabled className="justify-center">
-            Continuar con Google (próximamente)
+          <Button
+            type="button"
+            variant="outline"
+            disabled={googleLoading}
+            onClick={handleGoogle}
+            className="justify-center"
+          >
+            {googleLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Continuar con Google
           </Button>
           <p className="text-center text-xs text-ink-400">
             ¿No tienes cuenta?{' '}

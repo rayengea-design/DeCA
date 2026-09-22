@@ -23,6 +23,18 @@ service cloud.firestore {
       return isMember(companyId) && myProfile().role == 'admin';
     }
 
+    // Real (not just UI) enforcement of the free-trial document cap: 10 DeCA
+    // total per company (kept in sync by hand with TRIAL_DOC_LIMIT in
+    // src/lib/trial.ts — rules can't import that constant), waived entirely
+    // once a paid subscription is active or in its Stripe-retry grace period.
+    // The trial's 5-day cap is enforced client-side only (see trial.ts) —
+    // `createdAt` is stored as an ISO string, not a Firestore Timestamp, so a
+    // clean day-boundary check isn't practical here without a schema change.
+    function canCreateDeca(companyId) {
+      let c = get(/databases/$(database)/documents/companies/$(companyId)).data;
+      return c.get('subscriptionStatus', '') in ['active', 'past_due'] || c.get('decaCount', 0) < 10;
+    }
+
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin(resource.data.companyId));
 
@@ -60,12 +72,20 @@ service cloud.firestore {
     // identity), and only those same fields.
     match /companies/{companyId} {
       allow create: if signedIn() &&
-        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt']) &&
-        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt']) &&
-        request.resource.data.id == companyId;
+        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount']) &&
+        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount']) &&
+        request.resource.data.id == companyId &&
+        request.resource.data.decaCount == 0;
       allow read: if isMember(companyId);
       allow update: if isAdmin(companyId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'nif', 'domicilio']);
+      // Any member (not just the admin) may bump their own company's DeCA
+      // counter — it's written in the same batch as each new decaDoc, by
+      // whichever team member (driver or admin) is generating it, and only
+      // ever by exactly 1 at a time.
+      allow update: if isMember(companyId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['decaCount']) &&
+        request.resource.data.decaCount == resource.data.get('decaCount', 0) + 1;
       allow delete: if false;
 
       match /decaDocs/{docId} {
@@ -73,7 +93,8 @@ service cloud.firestore {
         // member (driver) only ever sees the ones they created themselves.
         allow read: if isMember(companyId) &&
           (isAdmin(companyId) || resource.data.createdBy == request.auth.uid);
-        allow create: if isMember(companyId) && request.resource.data.createdBy == request.auth.uid;
+        allow create: if isMember(companyId) && request.resource.data.createdBy == request.auth.uid &&
+          canCreateDeca(companyId);
         // Only `status`/`supersededBy` (correction flow) and `hidden`
         // (show/hide from the history view) may change after creation — the
         // legal document data itself must never be edited once generated,

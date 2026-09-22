@@ -26,10 +26,11 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 export function SignupPage() {
-  const { user, signup } = useAuth()
+  const { user, signup, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   // Guards the `if (user) …` redirect below from racing our own post-signup
   // `navigate()` call: `signup()` can flip `user` to truthy (via Firebase's
   // onAuthStateChanged) on the same tick we're about to navigate ourselves,
@@ -60,6 +61,19 @@ export function SignupPage() {
         setError('No se pudo crear la cuenta. Inténtalo de nuevo.')
       }
       setLoading(false)
+    }
+  }
+
+  async function handleGoogle() {
+    setError(null)
+    setGoogleLoading(true)
+    try {
+      const googleUser = await loginWithGoogle()
+      setJustSignedUp(true)
+      navigate('/configurar-empresa', { state: { nombre: googleUser.displayName ?? '' } })
+    } catch {
+      setError('No se pudo continuar con Google. Inténtalo de nuevo.')
+      setGoogleLoading(false)
     }
   }
 
@@ -119,9 +133,19 @@ export function SignupPage() {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Crear cuenta
           </Button>
-          <Button type="button" variant="outline" disabled className="justify-center">
-            Continuar con Google (próximamente)
+          <Button
+            type="button"
+            variant="outline"
+            disabled={googleLoading}
+            onClick={handleGoogle}
+            className="justify-center"
+          >
+            {googleLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Continuar con Google
           </Button>
+          <p className="text-center text-xs text-ink-400">
+            Al continuar con Google, aceptas los Términos de Servicio y la Política de Privacidad.
+          </p>
           <p className="text-center text-xs text-ink-400">
             ¿Ya tienes cuenta?{' '}
             <Link to="/login" className="font-medium text-brand-600 hover:underline">

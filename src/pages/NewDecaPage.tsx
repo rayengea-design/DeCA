@@ -6,8 +6,10 @@ import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { DecaFormFields } from '@/components/deca/DecaFormFields'
+import { TrialExhaustedNotice } from '@/components/TrialExhaustedNotice'
 import { useAuth } from '@/context/AuthContext'
 import { decaFormSchema, type DecaFormFieldValues } from '@/lib/decaFormSchema'
+import { isTrialExhausted } from '@/lib/trial'
 import { shareDecaPdf } from '@/lib/utils'
 import { createDecaDocument } from '@/services/decaService'
 import { decaFileName } from '@/services/pdfGenerator'
@@ -38,6 +40,8 @@ export function NewDecaPage() {
   })
 
   const role = watch('ownRole')
+
+  if (company && isTrialExhausted(company)) return <TrialExhaustedNotice />
 
   async function onSubmit(values: DecaFormFieldValues) {
     if (!user || !company) return

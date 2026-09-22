@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { DecaFormFields } from '@/components/deca/DecaFormFields'
+import { TrialExhaustedNotice } from '@/components/TrialExhaustedNotice'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import { useAuth } from '@/context/AuthContext'
 import { decaFormSchema, type DecaFormFieldValues } from '@/lib/decaFormSchema'
+import { isTrialExhausted } from '@/lib/trial'
 import { correctDecaDocument, getDecaDocument } from '@/services/decaService'
 import type { DecaRecord } from '@/types/deca'
 
@@ -123,6 +125,8 @@ export function CorrectDecaPage() {
   }
 
   if (!original) return <Navigate to="/app/historial" replace />
+
+  if (company && isTrialExhausted(company)) return <TrialExhaustedNotice />
 
   if (original.status === 'superseded') {
     return (

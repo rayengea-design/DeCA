@@ -1,19 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, CheckCircle2, Clock, FileText, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileText, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
+import { daysSinceSignup, isSubscribed, TRIAL_DAY_LIMIT, TRIAL_DOC_LIMIT } from '@/lib/trial'
+import { openBillingPortal, startCheckout } from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
-import { getDecaDocumentCount } from '@/services/decaService'
-
-const TRIAL_DOC_LIMIT = 10
-const TRIAL_DAY_LIMIT = 5
+import type { PlanId } from '@/types/deca'
 
 const infoSchema = z.object({
   nif: z.string().min(3, 'Obligatorio'),
@@ -22,16 +21,31 @@ const infoSchema = z.object({
 
 type InfoFormValues = z.infer<typeof infoSchema>
 
+const PLANS: { id: PlanId; name: string; price: string; features: string[] }[] = [
+  {
+    id: 'basico',
+    name: 'Básico',
+    price: '19€/mes',
+    features: ['Hasta 3 conductores', 'DeCA ilimitados', 'Historial y exportación CSV'],
+  },
+  {
+    id: 'flota',
+    name: 'Flota',
+    price: '49€/mes',
+    features: ['Hasta 10 conductores', 'Corrección de documentos', 'Soporte prioritario'],
+  },
+]
+
+const PLAN_NAMES: Record<PlanId, string> = { basico: 'Básico', flota: 'Flota' }
+
 export function BillingPage() {
-  const { profile, company } = useAuth()
-  // Captured once per mount (not read live) — this page doesn't need to
-  // tick in real time, and calling `Date.now()` directly during render is
-  // an impure read React's compiler warns against.
-  const [now] = useState(() => Date.now())
-  const [docsUsed, setDocsUsed] = useState<number | null>(null)
+  const { user, profile, company } = useAuth()
+  const [searchParams] = useSearchParams()
   const [savedInfo, setSavedInfo] = useState<{ nif: string; domicilio: string } | null>(null)
   const [savingInfo, setSavingInfo] = useState(false)
   const [infoError, setInfoError] = useState<string | null>(null)
+  const [redirecting, setRedirecting] = useState<PlanId | 'portal' | null>(null)
+  const [billingError, setBillingError] = useState<string | null>(null)
 
   const {
     register,
@@ -39,21 +53,37 @@ export function BillingPage() {
     formState: { errors },
   } = useForm<InfoFormValues>({ resolver: zodResolver(infoSchema) })
 
-  useEffect(() => {
-    if (!company) return
-    getDecaDocumentCount(company.id).then(setDocsUsed)
-  }, [company])
-
   if (profile && profile.role !== 'admin') return <Navigate to="/app" replace />
-  if (!company) return null
+  if (!user || !company) return null
 
   const nif = savedInfo?.nif ?? company.nif
   const domicilio = savedInfo?.domicilio ?? company.domicilio
+  const subscribed = isSubscribed(company)
+  const docsUsed = company.decaCount ?? 0
+  const daysRemaining = Math.max(0, TRIAL_DAY_LIMIT - daysSinceSignup(company))
+  const checkoutResult = searchParams.get('checkout')
 
-  const daysElapsed = Math.floor((now - new Date(company.createdAt).getTime()) / (24 * 60 * 60 * 1000))
-  const daysRemaining = Math.max(0, TRIAL_DAY_LIMIT - daysElapsed)
-  const docsRemaining = docsUsed === null ? null : Math.max(0, TRIAL_DOC_LIMIT - docsUsed)
-  const trialExpired = daysRemaining <= 0 || (docsRemaining !== null && docsRemaining <= 0)
+  async function handleChoosePlan(plan: PlanId) {
+    setBillingError(null)
+    setRedirecting(plan)
+    try {
+      window.location.href = await startCheckout(user!, plan)
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'No se pudo iniciar el pago.')
+      setRedirecting(null)
+    }
+  }
+
+  async function handleManageBilling() {
+    setBillingError(null)
+    setRedirecting('portal')
+    try {
+      window.location.href = await openBillingPortal(user!)
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'No se pudo abrir el portal de facturación.')
+      setRedirecting(null)
+    }
+  }
 
   async function onSubmitInfo(values: InfoFormValues) {
     setInfoError(null)
@@ -70,6 +100,25 @@ export function BillingPage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-5">
+      {checkoutResult === 'exito' && (
+        <div className="flex items-center gap-2 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          Pago completado. Puede tardar unos segundos en reflejarse aquí.
+        </div>
+      )}
+      {checkoutResult === 'cancelado' && (
+        <div className="flex items-center gap-2 rounded-md bg-ink-50 px-4 py-3 text-sm text-ink-600">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Pago cancelado. No se te ha cobrado nada.
+        </div>
+      )}
+      {billingError && (
+        <div className="flex items-center gap-2 rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {billingError}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Tu plan</CardTitle>
@@ -77,57 +126,95 @@ export function BillingPage() {
         <CardContent className="flex flex-col gap-5">
           <div className="flex items-center justify-between rounded-md border border-ink-100 px-4 py-3">
             <div>
-              <p className="font-semibold text-ink-900">Prueba gratis</p>
+              <p className="font-semibold text-ink-900">
+                {subscribed ? `Plan ${PLAN_NAMES[company.plan ?? 'basico']}` : 'Prueba gratis'}
+              </p>
               <p className="text-sm text-ink-400">
-                {trialExpired
-                  ? 'Tu periodo de prueba ha terminado.'
-                  : `Hasta ${TRIAL_DOC_LIMIT} DeCA o ${TRIAL_DAY_LIMIT} días, lo que llegue antes.`}
+                {subscribed
+                  ? company.subscriptionStatus === 'past_due'
+                    ? 'Hay un problema con tu último cobro — revisa tu método de pago.'
+                    : 'Suscripción activa.'
+                  : docsUsed >= TRIAL_DOC_LIMIT || daysRemaining <= 0
+                    ? 'Tu periodo de prueba ha terminado.'
+                    : `Hasta ${TRIAL_DOC_LIMIT} DeCA o ${TRIAL_DAY_LIMIT} días, lo que llegue antes.`}
               </p>
             </div>
-            {trialExpired ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-                <AlertCircle className="h-3.5 w-3.5" />
-                Finalizada
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-                <Clock className="h-3.5 w-3.5" />
-                En prueba
-              </span>
-            )}
+            <span
+              className={
+                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ' +
+                (subscribed && company.subscriptionStatus !== 'past_due'
+                  ? 'bg-green-50 text-green-700'
+                  : 'bg-brand-50 text-brand-700')
+              }
+            >
+              {subscribed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+              {subscribed ? (company.subscriptionStatus === 'past_due' ? 'Pago pendiente' : 'Activo') : 'En prueba'}
+            </span>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
-              <FileText className="h-5 w-5 shrink-0 text-ink-400" />
-              <div>
-                <p className="text-sm font-semibold text-ink-900">
-                  {docsUsed === null ? '—' : `${Math.min(docsUsed, TRIAL_DOC_LIMIT)}/${TRIAL_DOC_LIMIT}`}
-                </p>
-                <p className="text-xs text-ink-400">Documentos generados</p>
+          {!subscribed && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+                <FileText className="h-5 w-5 shrink-0 text-ink-400" />
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">
+                    {Math.min(docsUsed, TRIAL_DOC_LIMIT)}/{TRIAL_DOC_LIMIT}
+                  </p>
+                  <p className="text-xs text-ink-400">Documentos generados</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+                <Clock className="h-5 w-5 shrink-0 text-ink-400" />
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">
+                    {daysRemaining}/{TRIAL_DAY_LIMIT} días restantes
+                  </p>
+                  <p className="text-xs text-ink-400">Desde el alta de tu empresa</p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
-              <Clock className="h-5 w-5 shrink-0 text-ink-400" />
-              <div>
-                <p className="text-sm font-semibold text-ink-900">
-                  {daysRemaining}/{TRIAL_DAY_LIMIT} días restantes
-                </p>
-                <p className="text-xs text-ink-400">Desde el alta de tu empresa</p>
-              </div>
-            </div>
-          </div>
+          )}
 
-          <div className="flex flex-col gap-1.5">
-            <Button disabled className="self-start">
+          {subscribed && (
+            <Button onClick={handleManageBilling} disabled={redirecting !== null} className="self-start">
+              {redirecting === 'portal' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
               Gestionar facturación
             </Button>
-            <p className="text-xs text-ink-400">
-              Próximamente: elige un plan de pago y gestiona tu suscripción y método de pago desde aquí.
-            </p>
-          </div>
+          )}
         </CardContent>
       </Card>
+
+      {!subscribed && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Elige un plan</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {PLANS.map((plan) => (
+              <div key={plan.id} className="flex flex-col rounded-lg border border-ink-100 p-4">
+                <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
+                <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
+                <ul className="mt-3 flex flex-1 flex-col gap-1.5">
+                  {plan.features.map((f) => (
+                    <li key={f} className="text-xs text-ink-500">
+                      · {f}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => handleChoosePlan(plan.id)}
+                  disabled={redirecting !== null}
+                  className="mt-4"
+                  variant={plan.id === 'flota' ? 'default' : 'outline'}
+                >
+                  {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Elegir {plan.name}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {(!nif || !domicilio) && (
         <Card>

@@ -25,7 +25,11 @@ export function CompanySetupPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const prefillNombre = (location.state as { nombre?: string } | null)?.nombre ?? ''
+  // The state param covers email/password and Google signup (both hand the
+  // company/display name forward explicitly). A returning Google user who
+  // signs in via /login with no company yet won't have that state, so fall
+  // back to their Google profile name rather than leaving the field blank.
+  const prefillNombre = (location.state as { nombre?: string } | null)?.nombre ?? user?.displayName ?? ''
 
   const {
     register,

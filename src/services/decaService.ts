@@ -1,4 +1,16 @@
-import { collection, doc, getCountFromServer, getDoc, getDocs, orderBy, query, setDoc, where } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getCountFromServer,
+  getDoc,
+  getDocs,
+  increment,
+  orderBy,
+  query,
+  setDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore'
 import { ref, uploadBytes } from 'firebase/storage'
 import { db, storage, storageBucket } from '@/config/firebase'
 import { buildDecaPdf, buildSupersededNoticePdf, decaFileName } from '@/services/pdfGenerator'
@@ -65,7 +77,15 @@ export async function createDecaDocument(
       : {}),
   }
 
-  await setDoc(doc(decaCollection(companyId), docId), record)
+  // Batched (not a plain setDoc): the DeCA record and the company's
+  // `decaCount` bump must succeed or fail together, since `decaCount` is
+  // what firestore.rules checks to enforce the free-trial document cap —
+  // an out-of-sync counter would either lock a paying company out or let a
+  // trial company generate past its limit.
+  const batch = writeBatch(db)
+  batch.set(doc(decaCollection(companyId), docId), record)
+  batch.update(doc(db, 'companies', companyId), { decaCount: increment(1) })
+  await batch.commit()
 
   return record
 }

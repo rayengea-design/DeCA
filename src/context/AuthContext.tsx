@@ -1,7 +1,9 @@
 import {
   createUserWithEmailAndPassword,
+  GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   type User,
 } from 'firebase/auth'
@@ -23,6 +25,7 @@ interface AuthContextValue {
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<User>
   logout: () => Promise<void>
   setupCompany: (input: CompanySetupInput) => Promise<void>
 }
@@ -95,6 +98,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await createUserWithEmailAndPassword(auth, email, password)
   }
 
+  // Works for both signup and login — Firebase treats a Google sign-in as
+  // "the account already exists" if that Google email has signed in before,
+  // or creates a brand-new Auth user otherwise. Either way the caller ends
+  // up with no profile doc yet on a first-ever sign-in, which routes them
+  // through `/configurar-empresa` exactly like a fresh email/password signup.
+  async function loginWithGoogle() {
+    const credential = await signInWithPopup(auth, new GoogleAuthProvider())
+    return credential.user
+  }
+
   async function logout() {
     await signOut(auth)
   }
@@ -109,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nif,
       domicilio,
       createdAt: new Date().toISOString(),
+      decaCount: 0,
     }
     const newProfile: UserProfile = {
       uid,
@@ -140,7 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, company, loading, login, signup, logout, setupCompany }}>
+    <AuthContext.Provider
+      value={{ user, profile, company, loading, login, signup, loginWithGoogle, logout, setupCompany }}
+    >
       {children}
     </AuthContext.Provider>
   )

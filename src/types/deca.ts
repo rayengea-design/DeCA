@@ -1,5 +1,7 @@
 export type PartyRole = 'cargador' | 'transportista'
 
+export type PlanId = 'basico' | 'flota'
+
 export interface PartyInfo {
   nombre: string
   nif: string
@@ -22,6 +24,18 @@ export interface Company {
    * consola de Firebase). */
   nif?: string
   domicilio?: string
+  /** Total de DeCA generados históricamente por la empresa (incluye
+   * correcciones). Se incrementa atómicamente junto con cada nuevo
+   * documento y es lo que hace cumplible el límite de 10 DeCA de la prueba
+   * gratuita a nivel de firestore.rules, no solo en la interfaz. */
+  decaCount?: number
+  /** Plan de pago contratado — solo lo escribe el backend (funciones de
+   * Vercel) a partir de los webhooks de Stripe, nunca el cliente. */
+  plan?: PlanId
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  subscriptionStatus?: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'unpaid'
+  currentPeriodEnd?: string
 }
 
 export interface UserProfile {
