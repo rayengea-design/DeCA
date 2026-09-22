@@ -3,6 +3,10 @@ import type { Company, PlanId, SelfServePlanId } from '@/types/deca'
 
 export const TRIAL_MEMBER_LIMIT = 3
 
+export const WHATSAPP_CONTACT_URL = `https://wa.me/34600794114?text=${encodeURIComponent(
+  'Hola, me interesa el plan Flota+ de DeCA.',
+)}`
+
 interface PlanDef {
   id: SelfServePlanId
   name: string
@@ -59,4 +63,17 @@ const PLAN_MEMBER_LIMITS: Record<PlanId, number> = {
 export function memberLimitFor(company: Company): number {
   if (isSubscribed(company) && company.plan) return PLAN_MEMBER_LIMITS[company.plan]
   return TRIAL_MEMBER_LIMIT
+}
+
+/** Days left until the subscription's current billing period ends — when
+ * `cancelAtPeriodEnd` is set, that's also the day access actually stops
+ * (Stripe keeps a canceled subscription usable through what's already been
+ * paid for, rather than cutting it off immediately). `null` when there's no
+ * period on file yet (webhook hasn't landed, or no subscription at all).
+ * Takes just the one field it needs (not a full `Company`) so it also works
+ * for the admin panel's row type, which isn't a `Company`. */
+export function daysUntilPeriodEnd(company: { currentPeriodEnd?: string | null }, now = Date.now()): number | null {
+  if (!company.currentPeriodEnd) return null
+  const ms = new Date(company.currentPeriodEnd).getTime() - now
+  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)))
 }

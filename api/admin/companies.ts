@@ -20,6 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         createdAt: c.createdAt ?? null,
         plan: c.plan ?? null,
         subscriptionStatus: c.subscriptionStatus ?? null,
+        currentPeriodEnd: c.currentPeriodEnd ?? null,
+        cancelAtPeriodEnd: c.cancelAtPeriodEnd ?? false,
         comped: c.comped ?? false,
         decaCount: c.decaCount ?? 0,
         memberCount: c.memberCount ?? 1,

@@ -12,6 +12,8 @@ export interface AdminCompanyRow {
   decaCount: number
   memberCount: number
   hasStripeCustomer: boolean
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
 }
 
 async function callAdminApi(path: string, user: User, init?: RequestInit) {

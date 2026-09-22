@@ -47,7 +47,11 @@ export interface Company {
   stripeCustomerId?: string
   stripeSubscriptionId?: string
   subscriptionStatus?: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'unpaid'
+  /** Cuándo se cobra/renueva el siguiente periodo — o, si `cancelAtPeriodEnd`
+   * es true, cuándo deja de tener acceso (canceló pero Stripe no revoca el
+   * acceso hasta que el periodo ya pagado termina). */
   currentPeriodEnd?: string
+  cancelAtPeriodEnd?: boolean
   /** true cuando el plan se lo ha regalado el administrador de la
    * plataforma desde el panel de administración, sin pasar por Stripe
    * (`stripeSubscriptionId` queda vacío en ese caso). */

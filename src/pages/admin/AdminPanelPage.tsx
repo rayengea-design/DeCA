@@ -5,7 +5,7 @@ import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { useAuth } from '@/context/AuthContext'
-import { PLAN_NAMES } from '@/lib/plans'
+import { daysUntilPeriodEnd, PLAN_NAMES } from '@/lib/plans'
 import { formatDate } from '@/lib/utils'
 import { type AdminCompanyRow, grantPlan, listAllCompanies } from '@/services/adminService'
 import type { PlanId } from '@/types/deca'
@@ -99,13 +99,14 @@ export function AdminPanelPage() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-ink-100 bg-white">
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full min-w-[1050px] text-left text-sm">
               <thead className="border-b border-ink-100 text-xs uppercase tracking-wide text-ink-400">
                 <tr>
                   <th className="px-4 py-3">Empresa</th>
                   <th className="px-4 py-3">Alta</th>
                   <th className="px-4 py-3">Plan</th>
                   <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3">Renovación</th>
                   <th className="px-4 py-3">DeCA</th>
                   <th className="px-4 py-3">Equipo</th>
                   <th className="px-4 py-3">Regalar plan</th>
@@ -132,6 +133,19 @@ export function AdminPanelPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-ink-500">{c.subscriptionStatus ?? '—'}</td>
+                    <td className="px-4 py-3 text-ink-500">
+                      {c.currentPeriodEnd ? (
+                        <>
+                          <p>{formatDate(c.currentPeriodEnd)}</p>
+                          <p className="text-xs text-ink-400">
+                            {c.cancelAtPeriodEnd ? 'Cancelada · ' : ''}
+                            {daysUntilPeriodEnd(c)} días
+                          </p>
+                        </>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-ink-500">{c.decaCount}</td>
                     <td className="px-4 py-3 text-ink-500">{c.memberCount}</td>
                     <td className="px-4 py-3">

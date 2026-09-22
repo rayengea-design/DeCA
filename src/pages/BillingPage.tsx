@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
-import { memberLimitFor, PLAN_NAMES, PLANS } from '@/lib/plans'
+import { daysUntilPeriodEnd, memberLimitFor, PLAN_NAMES, PLANS, WHATSAPP_CONTACT_URL } from '@/lib/plans'
 import { daysSinceSignup, isSubscribed, TRIAL_DAY_LIMIT, TRIAL_DOC_LIMIT } from '@/lib/trial'
+import { formatDate } from '@/lib/utils'
 import { changePlan, openBillingPortal, startCheckout } from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
 import type { SelfServePlanId } from '@/types/deca'
@@ -50,6 +51,7 @@ export function BillingPage() {
   const membersUsed = company.memberCount ?? 1
   const memberLimit = memberLimitFor(company)
   const hasFiscalInfo = Boolean(nif && domicilio)
+  const periodEndDays = daysUntilPeriodEnd(company)
 
   async function handleChoosePlan(plan: SelfServePlanId) {
     setBillingError(null)
@@ -154,7 +156,25 @@ export function BillingPage() {
             </span>
           </div>
 
-          <div className={`grid gap-4 ${subscribed ? 'sm:grid-cols-1' : 'sm:grid-cols-3'}`}>
+          {subscribed && company.currentPeriodEnd && (
+            <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+              <Clock className="h-5 w-5 shrink-0 text-ink-400" />
+              <div>
+                <p className="text-sm font-semibold text-ink-900">
+                  {company.cancelAtPeriodEnd
+                    ? `Se cancela el ${formatDate(company.currentPeriodEnd)}`
+                    : `Se renueva el ${formatDate(company.currentPeriodEnd)}`}
+                </p>
+                <p className="text-xs text-ink-400">
+                  {periodEndDays === 0
+                    ? 'Hoy'
+                    : `${periodEndDays} ${periodEndDays === 1 ? 'día' : 'días'} ${company.cancelAtPeriodEnd ? 'de acceso restantes' : 'para el próximo cobro'}`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className={`grid gap-4 ${subscribed ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
             {!subscribed && (
               <>
                 <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
@@ -177,6 +197,21 @@ export function BillingPage() {
                 </div>
               </>
             )}
+            {subscribed && periodEndDays !== null && (
+              <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+                <Clock className="h-5 w-5 shrink-0 text-ink-400" />
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">
+                    {periodEndDays} {periodEndDays === 1 ? 'día' : 'días'}
+                  </p>
+                  <p className="text-xs text-ink-400">
+                    {company.cancelAtPeriodEnd
+                      ? `Pierdes el acceso el ${formatDate(company.currentPeriodEnd!)}`
+                      : `Se renueva el ${formatDate(company.currentPeriodEnd!)}`}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
               <Users className="h-5 w-5 shrink-0 text-ink-400" />
               <div>
@@ -187,6 +222,12 @@ export function BillingPage() {
               </div>
             </div>
           </div>
+          {subscribed && company.cancelAtPeriodEnd && (
+            <div className="flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Has cancelado tu suscripción — sigues teniendo acceso hasta esa fecha, luego pasa a prueba caducada.
+            </div>
+          )}
 
           {subscribed && (
             <Button onClick={handleManageBilling} disabled={redirecting !== null} className="self-start">
@@ -285,7 +326,12 @@ export function BillingPage() {
           </div>
           <p className="text-center text-xs text-ink-400">
             ¿Más de 50 conductores?{' '}
-            <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
+            <a
+              href={WHATSAPP_CONTACT_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand-600 hover:underline"
+            >
               Habla con nosotros
             </a>{' '}
             sobre el plan Flota+.

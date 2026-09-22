@@ -46,6 +46,7 @@ async function syncSubscription(subscription: Stripe.Subscription) {
       subscriptionStatus: subscription.status,
       plan: planFromPriceId(priceId) ?? null,
       currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
     })
 }
 

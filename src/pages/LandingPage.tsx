@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
+import { WHATSAPP_CONTACT_URL } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
 const features = [
@@ -109,7 +110,7 @@ const plans: PricingPlan[] = [
     description: 'Para grupos logísticos con más de 50 conductores o necesidades propias.',
     features: ['Conductores ilimitados', 'Facturación a medida', 'Alta asistida del equipo', 'SLA dedicado'],
     cta: 'Hablar con nosotros',
-    href: 'mailto:info@gruponoveldisl.es',
+    href: WHATSAPP_CONTACT_URL,
   },
 ]
 
@@ -320,8 +321,10 @@ export function LandingPage() {
                   ))}
                 </ul>
                 <Button asChild className="mt-6" variant={plan.highlighted ? 'default' : 'outline'}>
-                  {plan.href.startsWith('mailto:') ? (
-                    <a href={plan.href}>{plan.cta}</a>
+                  {plan.href.startsWith('mailto:') || plan.href.startsWith('http') ? (
+                    <a href={plan.href} target={plan.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
+                      {plan.cta}
+                    </a>
                   ) : (
                     <Link to={plan.href}>{plan.cta}</Link>
                   )}
