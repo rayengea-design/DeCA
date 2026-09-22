@@ -25,7 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Plan inválido' })
     }
 
-    const companyRef = getAdminDb().collection('companies').doc(companyId)
+    const adminDb = await getAdminDb()
+    const companyRef = adminDb.collection('companies').doc(companyId)
     const snap = await companyRef.get()
     if (!snap.exists) return res.status(404).json({ error: 'No se encontró la empresa' })
 

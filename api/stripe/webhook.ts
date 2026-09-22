@@ -37,7 +37,8 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id
   const item = subscription.items.data[0]
 
-  await getAdminDb()
+  const adminDb = await getAdminDb()
+  await adminDb
     .collection('companies')
     .doc(companyId)
     .update({
@@ -58,7 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let event: Stripe.Event
   try {
     const rawBody = await readRawBody(req)
-    event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret)
+    const stripe = await getStripe()
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
   } catch (err) {
     console.error('Firma de webhook inválida', err)
     return res.status(400).send('Firma inválida')
@@ -69,7 +71,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         if (session.mode === 'subscription' && session.subscription) {
-          const subscription = await getStripe().subscriptions.retrieve(session.subscription as string)
+          const stripe = await getStripe()
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
           await syncSubscription(subscription)
         }
         break

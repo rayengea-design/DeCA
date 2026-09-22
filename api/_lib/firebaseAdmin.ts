@@ -1,6 +1,4 @@
-import { cert, getApps, initializeApp, type App } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import type { App } from 'firebase-admin/app'
 
 /** `FIREBASE_SERVICE_ACCOUNT` is the project's service-account JSON,
  * base64-encoded (Vercel env vars are plain strings, and the JSON contains
@@ -8,14 +6,25 @@ import { getFirestore } from 'firebase-admin/firestore'
  * the Firebase Console → Project Settings → Service accounts → "Generate
  * new private key", then base64-encode the downloaded file.
  *
- * Lazy, not module-level: throwing at import time crashes the whole
- * serverless function before any handler's try/catch runs, which Vercel
- * then reports as an opaque "FUNCTION_INVOCATION_FAILED" with no detail.
- * Calling this from inside a handler instead surfaces a real error message
- * (missing var, bad base64, invalid JSON, cert() rejecting the shape...). */
-function getAdminApp(): App {
+ * Async with a dynamic `import()`, not a static top-level one: a static
+ * `import ... from 'firebase-admin/...'` gets bundled by Vercel's builder in
+ * a way that crashes at load time with `ERR_REQUIRE_ESM` (one of
+ * firebase-admin's own transitive deps only ships an ESM build) — before
+ * any handler code, including try/catch, ever runs. A dynamic import
+ * sidesteps that bundling path entirely and also means a bad/missing env
+ * var surfaces as a normal caught error instead of an opaque
+ * "FUNCTION_INVOCATION_FAILED". */
+let cachedApp: App | null = null
+
+async function getAdminApp(): Promise<App> {
+  if (cachedApp) return cachedApp
+
+  const { cert, getApps, initializeApp } = await import('firebase-admin/app')
   const existing = getApps()[0]
-  if (existing) return existing
+  if (existing) {
+    cachedApp = existing
+    return existing
+  }
 
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT
   if (!raw) throw new Error('Falta FIREBASE_SERVICE_ACCOUNT en las variables de entorno')
@@ -27,13 +36,16 @@ function getAdminApp(): App {
     throw new Error('FIREBASE_SERVICE_ACCOUNT no es un JSON válido en base64 — revisa que se haya copiado entero')
   }
 
-  return initializeApp({ credential: cert(serviceAccount as object) })
+  cachedApp = initializeApp({ credential: cert(serviceAccount as object) })
+  return cachedApp
 }
 
-export function getAdminAuth() {
-  return getAuth(getAdminApp())
+export async function getAdminAuth() {
+  const { getAuth } = await import('firebase-admin/auth')
+  return getAuth(await getAdminApp())
 }
 
-export function getAdminDb() {
-  return getFirestore(getAdminApp())
+export async function getAdminDb() {
+  const { getFirestore } = await import('firebase-admin/firestore')
+  return getFirestore(await getAdminApp())
 }

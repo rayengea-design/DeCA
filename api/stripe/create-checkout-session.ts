@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { email, companyRef, company } = await requireCompanyAdmin(req)
-    const stripe = getStripe()
+    const stripe = await getStripe()
     const origin = `https://${req.headers.host}`
 
     let customerId = company.stripeCustomerId as string | undefined

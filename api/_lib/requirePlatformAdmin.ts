@@ -13,7 +13,8 @@ export async function requirePlatformAdmin(req: VercelRequest) {
   const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
   if (!idToken) throw new ApiError(401, 'Falta el token de autenticación')
 
-  const decoded = await getAdminAuth().verifyIdToken(idToken).catch(() => null)
+  const adminAuth = await getAdminAuth()
+  const decoded = await adminAuth.verifyIdToken(idToken).catch(() => null)
   if (!decoded || !decoded.email) throw new ApiError(401, 'Token inválido o caducado')
 
   const allowlist = (process.env.PLATFORM_ADMIN_EMAILS ?? '')

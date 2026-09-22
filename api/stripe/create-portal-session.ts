@@ -10,8 +10,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const customerId = company.stripeCustomerId as string | undefined
     if (!customerId) return res.status(400).json({ error: 'Esta empresa todavía no tiene una suscripción' })
 
+    const stripe = await getStripe()
     const origin = `https://${req.headers.host}`
-    const session = await getStripe().billingPortal.sessions.create({
+    const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/app/facturacion`,
     })
