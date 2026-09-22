@@ -42,6 +42,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     if (err instanceof ApiError) return res.status(err.status).json({ error: err.message })
     console.error('create-checkout-session error', err)
-    return res.status(500).json({ error: 'No se pudo iniciar el pago' })
+    return res
+      .status(500)
+      .json({ error: 'No se pudo iniciar el pago', debug: err instanceof Error ? err.message : String(err) })
   }
 }
