@@ -1,7 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { AuthProvider } from '@/context/AuthContext'
+import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
 import { LandingPage } from '@/pages/LandingPage'
 
 function RouteFallback() {
@@ -33,13 +32,30 @@ const SignupPage = lazy(() => import('@/pages/SignupPage').then((m) => ({ defaul
 const TeamPage = lazy(() => import('@/pages/TeamPage').then((m) => ({ default: m.TeamPage })))
 const TermsPage = lazy(() => import('@/pages/TermsPage').then((m) => ({ default: m.TermsPage })))
 
-export default function App() {
+// Also lazy, and deliberately NOT wrapping the landing page: AuthProvider's
+// module pulls in the whole Firebase SDK (auth + firestore + storage) as a
+// static import, so — unlike the page components above, whose own weight
+// stays out of the bundle regardless of where they're rendered from —
+// keeping AuthProvider itself out of the landing page's chunk is what
+// actually keeps Firebase off it. The landing page doesn't call useAuth() at
+// all, so it loses nothing.
+const AuthProvider = lazy(() => import('@/context/AuthContext').then((m) => ({ default: m.AuthProvider })))
+
+function AuthLayout() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
+      <Outlet />
+    </AuthProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<SignupPage />} />
             <Route path="/terminos" element={<TermsPage />} />
@@ -56,9 +72,9 @@ export default function App() {
               </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </AuthProvider>
+          </Route>
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   )
 }

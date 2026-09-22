@@ -1,4 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+/* Fonts are linked from index.html (preconnect + <link>), not imported here
+ * — an `@import` inside CSS is render-blocking and can't be discovered by
+ * the browser's preload scanner until this whole stylesheet has already
+ * downloaded, which delays first paint noticeably more than a <link> tag
+ * the scanner sees immediately in <head>. */
 
 @tailwind base;
 @tailwind components;
