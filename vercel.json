@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "rewrites": [
     {
       "source": "/((?!assets/|favicon\\.svg|apple-touch-icon\\.png|pwa-.*\\.png|manifest\\.webmanifest|sw\\.js|registerSW\\.js|workbox-.*\\.js).*)",
