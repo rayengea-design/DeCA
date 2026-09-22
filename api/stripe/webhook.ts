@@ -16,9 +16,10 @@ function readRawBody(req: VercelRequest): Promise<Buffer> {
   })
 }
 
-function planFromPriceId(priceId: string | undefined): 'basico' | 'flota' | undefined {
+function planFromPriceId(priceId: string | undefined): 'basico' | 'flota' | 'empresa' | undefined {
   if (priceId === PRICE_IDS.basico) return 'basico'
   if (priceId === PRICE_IDS.flota) return 'flota'
+  if (priceId === PRICE_IDS.empresa) return 'empresa'
   return undefined
 }
 

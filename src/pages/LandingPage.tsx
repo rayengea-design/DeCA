@@ -95,9 +95,18 @@ const plans: PricingPlan[] = [
     highlighted: true,
   },
   {
+    name: 'Empresa',
+    price: '99€',
+    period: '/mes',
+    description: 'Para grupos de transporte con varios equipos y muchos conductores.',
+    features: ['Hasta 50 conductores', 'Todo lo del plan Flota', 'Soporte prioritario'],
+    cta: 'Empezar prueba gratis',
+    href: '/registro',
+  },
+  {
     name: 'Flota+',
     price: 'A medida',
-    description: 'Para grupos logísticos con muchos conductores o necesidades propias.',
+    description: 'Para grupos logísticos con más de 50 conductores o necesidades propias.',
     features: ['Conductores ilimitados', 'Facturación a medida', 'Alta asistida del equipo', 'SLA dedicado'],
     cta: 'Hablar con nosotros',
     href: 'mailto:info@gruponoveldisl.es',
@@ -282,7 +291,7 @@ export function LandingPage() {
             <h2 className="font-heading text-3xl font-bold text-ink-900">Precios simples, sin sorpresas</h2>
             <p className="mt-2 text-ink-500">10 DeCA o 5 días de prueba gratis en cualquier plan. Sin tarjeta de crédito.</p>
           </div>
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          <div className="mt-10 grid gap-6 lg:grid-cols-4">
             {plans.map((plan) => (
               <div
                 key={plan.name}

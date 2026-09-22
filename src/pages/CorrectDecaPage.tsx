@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { DecaFormFields } from '@/components/deca/DecaFormFields'
+import { MissingCompanyInfoNotice } from '@/components/MissingCompanyInfoNotice'
 import { TrialExhaustedNotice } from '@/components/TrialExhaustedNotice'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -42,13 +43,13 @@ export function CorrectDecaPage() {
       .then((record) => {
         setOriginal(record)
         if (record) {
-          const own = record.ownRole === 'cargador' ? record.cargador : record.transportista
+          // The "own" party from the original is intentionally NOT prefilled
+          // here — it's now locked to the company's current registered
+          // identity (see DecaFormFields), which fixes historical drift if
+          // it was typed differently on the original document.
           const counterpart = record.ownRole === 'cargador' ? record.transportista : record.cargador
           reset({
             ownRole: record.ownRole,
-            ownNombre: own.nombre,
-            ownNif: own.nif,
-            ownDomicilio: own.domicilio,
             counterpartNombre: counterpart.nombre,
             counterpartNif: counterpart.nif,
             counterpartDomicilio: counterpart.domicilio,
@@ -74,7 +75,7 @@ export function CorrectDecaPage() {
   }, [company, id, reset])
 
   async function onSubmit(values: DecaFormFieldValues) {
-    if (!user || !company || !original) return
+    if (!user || !company || !original || !company.nif || !company.domicilio) return
     if (reason.trim().length < 5) {
       setReasonError('Explica brevemente el motivo de la corrección (mínimo 5 caracteres).')
       return
@@ -82,7 +83,7 @@ export function CorrectDecaPage() {
     setReasonError(null)
     setSubmitting(true)
     try {
-      const ownParty = { nombre: values.ownNombre, nif: values.ownNif, domicilio: values.ownDomicilio }
+      const ownParty = { nombre: company.nombre, nif: company.nif, domicilio: company.domicilio }
       const counterpart = {
         nombre: values.counterpartNombre,
         nif: values.counterpartNif,
@@ -127,6 +128,7 @@ export function CorrectDecaPage() {
   if (!original) return <Navigate to="/app/historial" replace />
 
   if (company && isTrialExhausted(company)) return <TrialExhaustedNotice />
+  if (company && (!company.nif || !company.domicilio)) return <MissingCompanyInfoNotice />
 
   if (original.status === 'superseded') {
     return (
@@ -175,13 +177,9 @@ export function CorrectDecaPage() {
         </CardContent>
       </Card>
 
-      <DecaFormFields
-        register={register}
-        control={control}
-        errors={errors}
-        role={role}
-        companyName={company?.nombre ?? 'Tu empresa'}
-      />
+      {company && (
+        <DecaFormFields register={register} control={control} errors={errors} role={role} company={company} />
+      )}
 
       <div className="flex gap-3">
         <Button type="button" variant="outline" className="flex-1" onClick={() => navigate('/app/historial')}>

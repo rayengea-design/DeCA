@@ -123,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       domicilio,
       createdAt: new Date().toISOString(),
       decaCount: 0,
+      memberCount: 1,
     }
     const newProfile: UserProfile = {
       uid,

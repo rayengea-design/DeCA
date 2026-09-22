@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileText, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileText, Loader2, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useSearchParams } from 'react-router-dom'
@@ -9,10 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
+import { memberLimitFor, PLAN_NAMES, PLANS } from '@/lib/plans'
 import { daysSinceSignup, isSubscribed, TRIAL_DAY_LIMIT, TRIAL_DOC_LIMIT } from '@/lib/trial'
 import { openBillingPortal, startCheckout } from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
-import type { PlanId } from '@/types/deca'
+import type { SelfServePlanId } from '@/types/deca'
 
 const infoSchema = z.object({
   nif: z.string().min(3, 'Obligatorio'),
@@ -21,30 +22,13 @@ const infoSchema = z.object({
 
 type InfoFormValues = z.infer<typeof infoSchema>
 
-const PLANS: { id: PlanId; name: string; price: string; features: string[] }[] = [
-  {
-    id: 'basico',
-    name: 'Básico',
-    price: '19€/mes',
-    features: ['Hasta 3 conductores', 'DeCA ilimitados', 'Historial y exportación CSV'],
-  },
-  {
-    id: 'flota',
-    name: 'Flota',
-    price: '49€/mes',
-    features: ['Hasta 10 conductores', 'Corrección de documentos', 'Soporte prioritario'],
-  },
-]
-
-const PLAN_NAMES: Record<PlanId, string> = { basico: 'Básico', flota: 'Flota' }
-
 export function BillingPage() {
   const { user, profile, company } = useAuth()
   const [searchParams] = useSearchParams()
   const [savedInfo, setSavedInfo] = useState<{ nif: string; domicilio: string } | null>(null)
   const [savingInfo, setSavingInfo] = useState(false)
   const [infoError, setInfoError] = useState<string | null>(null)
-  const [redirecting, setRedirecting] = useState<PlanId | 'portal' | null>(null)
+  const [redirecting, setRedirecting] = useState<SelfServePlanId | 'portal' | null>(null)
   const [billingError, setBillingError] = useState<string | null>(null)
 
   const {
@@ -62,8 +46,10 @@ export function BillingPage() {
   const docsUsed = company.decaCount ?? 0
   const daysRemaining = Math.max(0, TRIAL_DAY_LIMIT - daysSinceSignup(company))
   const checkoutResult = searchParams.get('checkout')
+  const membersUsed = company.memberCount ?? 1
+  const memberLimit = memberLimitFor(company)
 
-  async function handleChoosePlan(plan: PlanId) {
+  async function handleChoosePlan(plan: SelfServePlanId) {
     setBillingError(null)
     setRedirecting(plan)
     try {
@@ -152,28 +138,39 @@ export function BillingPage() {
             </span>
           </div>
 
-          {!subscribed && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
-                <FileText className="h-5 w-5 shrink-0 text-ink-400" />
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">
-                    {Math.min(docsUsed, TRIAL_DOC_LIMIT)}/{TRIAL_DOC_LIMIT}
-                  </p>
-                  <p className="text-xs text-ink-400">Documentos generados</p>
+          <div className={`grid gap-4 ${subscribed ? 'sm:grid-cols-1' : 'sm:grid-cols-3'}`}>
+            {!subscribed && (
+              <>
+                <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+                  <FileText className="h-5 w-5 shrink-0 text-ink-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">
+                      {Math.min(docsUsed, TRIAL_DOC_LIMIT)}/{TRIAL_DOC_LIMIT}
+                    </p>
+                    <p className="text-xs text-ink-400">Documentos generados</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
-                <Clock className="h-5 w-5 shrink-0 text-ink-400" />
-                <div>
-                  <p className="text-sm font-semibold text-ink-900">
-                    {daysRemaining}/{TRIAL_DAY_LIMIT} días restantes
-                  </p>
-                  <p className="text-xs text-ink-400">Desde el alta de tu empresa</p>
+                <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+                  <Clock className="h-5 w-5 shrink-0 text-ink-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-ink-900">
+                      {daysRemaining}/{TRIAL_DAY_LIMIT} días restantes
+                    </p>
+                    <p className="text-xs text-ink-400">Desde el alta de tu empresa</p>
+                  </div>
                 </div>
+              </>
+            )}
+            <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+              <Users className="h-5 w-5 shrink-0 text-ink-400" />
+              <div>
+                <p className="text-sm font-semibold text-ink-900">
+                  {membersUsed}/{Number.isFinite(memberLimit) ? memberLimit : '∞'}
+                </p>
+                <p className="text-xs text-ink-400">Cuentas de equipo (admin + conductores)</p>
               </div>
             </div>
-          )}
+          </div>
 
           {subscribed && (
             <Button onClick={handleManageBilling} disabled={redirecting !== null} className="self-start">
@@ -189,29 +186,38 @@ export function BillingPage() {
           <CardHeader>
             <CardTitle>Elige un plan</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            {PLANS.map((plan) => (
-              <div key={plan.id} className="flex flex-col rounded-lg border border-ink-100 p-4">
-                <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
-                <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
-                <ul className="mt-3 flex flex-1 flex-col gap-1.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="text-xs text-ink-500">
-                      · {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  onClick={() => handleChoosePlan(plan.id)}
-                  disabled={redirecting !== null}
-                  className="mt-4"
-                  variant={plan.id === 'flota' ? 'default' : 'outline'}
-                >
-                  {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Elegir {plan.name}
-                </Button>
-              </div>
-            ))}
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              {PLANS.map((plan) => (
+                <div key={plan.id} className="flex flex-col rounded-lg border border-ink-100 p-4">
+                  <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
+                  <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
+                  <ul className="mt-3 flex flex-1 flex-col gap-1.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="text-xs text-ink-500">
+                        · {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    onClick={() => handleChoosePlan(plan.id)}
+                    disabled={redirecting !== null}
+                    className="mt-4"
+                    variant={plan.id === 'flota' ? 'default' : 'outline'}
+                  >
+                    {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Elegir {plan.name}
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-xs text-ink-400">
+              ¿Más de 50 conductores?{' '}
+              <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
+                Habla con nosotros
+              </a>{' '}
+              sobre el plan Flota+.
+            </p>
           </CardContent>
         </Card>
       )}

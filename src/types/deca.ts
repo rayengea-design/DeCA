@@ -1,6 +1,11 @@
 export type PartyRole = 'cargador' | 'transportista'
 
-export type PlanId = 'basico' | 'flota'
+/** 'basico' | 'flota' | 'empresa' are self-serve, bought through Stripe
+ * Checkout. 'flota_plus' is sales-assisted/custom — never sold through
+ * Checkout, only ever set by the platform admin panel (comped or manually
+ * arranged), for companies past the 50-driver self-serve ceiling. */
+export type SelfServePlanId = 'basico' | 'flota' | 'empresa'
+export type PlanId = SelfServePlanId | 'flota_plus'
 
 export interface PartyInfo {
   nombre: string
@@ -29,13 +34,42 @@ export interface Company {
    * documento y es lo que hace cumplible el límite de 10 DeCA de la prueba
    * gratuita a nivel de firestore.rules, no solo en la interfaz. */
   decaCount?: number
+  /** Nº de cuentas de equipo activas (admin + conductores no desactivados).
+   * Igual que `decaCount`, se mantiene por código (no por Firestore) y es lo
+   * que firestore.rules compara contra el límite del plan al crear o
+   * reactivar una cuenta — empieza en 1 (el propio admin) al dar de alta la
+   * empresa. */
+  memberCount?: number
   /** Plan de pago contratado — solo lo escribe el backend (funciones de
-   * Vercel) a partir de los webhooks de Stripe, nunca el cliente. */
+   * Vercel a partir de los webhooks de Stripe, o el panel de administración
+   * de la plataforma al regalar un plan), nunca el cliente directamente. */
   plan?: PlanId
   stripeCustomerId?: string
   stripeSubscriptionId?: string
   subscriptionStatus?: 'trialing' | 'active' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'unpaid'
   currentPeriodEnd?: string
+  /** true cuando el plan se lo ha regalado el administrador de la
+   * plataforma desde el panel de administración, sin pasar por Stripe
+   * (`stripeSubscriptionId` queda vacío en ese caso). */
+  comped?: boolean
+}
+
+/** Una combinación guardada de contraparte + mercancía + ruta para no tener
+ * que volver a teclearla en cada porte habitual. Conveniencia pura — no es
+ * un documento legal, así que (a diferencia de DecaRecord) sí se puede
+ * editar o borrar libremente. */
+export interface SavedTrip {
+  id: string
+  /** Etiqueta elegida por el usuario, p. ej. "Murcia → Madrid, Cliente X". */
+  nombre: string
+  counterpartNombre: string
+  counterpartNif: string
+  counterpartDomicilio?: string
+  origen: string
+  destino: string
+  naturalezaMercancia: string
+  peso?: string
+  createdAt: string
 }
 
 export interface UserProfile {

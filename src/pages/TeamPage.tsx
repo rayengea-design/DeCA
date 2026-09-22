@@ -1,5 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, CheckCircle2, KeyRound, Loader2, Plus, ShieldCheck, UserX } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  KeyRound,
+  Loader2,
+  Plus,
+  ShieldCheck,
+  UserCog,
+  UserX,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate } from 'react-router-dom'
@@ -9,11 +18,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
+import { memberLimitFor } from '@/lib/plans'
 import {
   createTeamMember,
   listCompanyUsers,
   sendTeamMemberPasswordReset,
   setTeamMemberDisabled,
+  setTeamMemberRole,
 } from '@/services/teamService'
 import type { UserProfile } from '@/types/deca'
 
@@ -50,6 +61,11 @@ export function TeamPage() {
   }, [company])
 
   if (profile && profile.role !== 'admin') return <Navigate to="/app" replace />
+  if (!company) return null
+
+  const memberLimit = memberLimitFor(company)
+  const seatsUsed = members.filter((m) => !m.disabled).length
+  const atSeatLimit = seatsUsed >= memberLimit
 
   async function onSubmit(values: FormValues) {
     if (!company) return
@@ -62,6 +78,8 @@ export function TeamPage() {
     } catch (err) {
       if (err instanceof Error && err.message.includes('auth/email-already-in-use')) {
         setError('Ese email ya tiene una cuenta.')
+      } else if (err instanceof Error && err.message.includes('permission')) {
+        setError('Has alcanzado el límite de cuentas de tu plan actual. Amplía tu plan en Facturación.')
       } else {
         setError('No se pudo crear la cuenta. Inténtalo de nuevo.')
       }
@@ -71,10 +89,33 @@ export function TeamPage() {
   }
 
   async function toggleDisabled(uid: string, disabled: boolean) {
+    if (!company) return
     setPendingUid(uid)
+    setError(null)
     try {
-      await setTeamMemberDisabled(uid, disabled)
+      await setTeamMemberDisabled(company.id, uid, disabled)
       setMembers((prev) => prev.map((m) => (m.uid === uid ? { ...m, disabled } : m)))
+    } catch (err) {
+      if (!disabled) {
+        // Only reactivating can fail (it re-checks the seat limit) —
+        // disabling always succeeds since it only frees up a seat.
+        setError('No hay sitio: has alcanzado el límite de cuentas de tu plan actual.')
+      } else if (err instanceof Error) {
+        setError('No se pudo actualizar la cuenta. Inténtalo de nuevo.')
+      }
+    } finally {
+      setPendingUid(null)
+    }
+  }
+
+  async function toggleRole(m: UserProfile) {
+    setPendingUid(m.uid)
+    setError(null)
+    try {
+      await setTeamMemberRole(m.uid, m.role === 'admin' ? 'member' : 'admin')
+      setMembers((prev) => prev.map((x) => (x.uid === m.uid ? { ...x, role: m.role === 'admin' ? 'member' : 'admin' } : x)))
+    } catch {
+      setError('No se pudo cambiar el rol. Inténtalo de nuevo.')
     } finally {
       setPendingUid(null)
     }
@@ -108,39 +149,49 @@ export function TeamPage() {
           <CardTitle>Añadir conductor</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            {error && (
-              <div className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {error}
-              </div>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label htmlFor="nombre">Nombre (opcional)</Label>
-                <Input id="nombre" placeholder="Ej. Juan Pérez" {...register('nombre')} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" {...register('email')} />
-                {errors.email && <p className="text-xs text-brand-600">{errors.email.message}</p>}
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" {...register('password')} />
-                {errors.password && <p className="text-xs text-brand-600">{errors.password.message}</p>}
-              </div>
+          <p className="mb-4 text-xs text-ink-400">
+            {seatsUsed}/{Number.isFinite(memberLimit) ? memberLimit : '∞'} cuentas de equipo usadas en tu plan actual.
+          </p>
+          {atSeatLimit ? (
+            <div className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              Has alcanzado el límite de cuentas de tu plan. Amplía tu plan en Facturación para añadir más.
             </div>
-            <p className="text-xs text-ink-400">
-              Se creará su cuenta con esta contraseña — pásasela tú mismo por el canal que
-              prefieras. El conductor solo verá los DeCA que él mismo genere; tú los ves todos.
-            </p>
-            <Button type="submit" disabled={creating} className="self-start">
-              {creating && <Loader2 className="h-4 w-4 animate-spin" />}
-              <Plus className="h-4 w-4" />
-              Crear conductor
-            </Button>
-          </form>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              {error && (
+                <div className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {error}
+                </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Label htmlFor="nombre">Nombre (opcional)</Label>
+                  <Input id="nombre" placeholder="Ej. Juan Pérez" {...register('nombre')} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" {...register('email')} />
+                  {errors.email && <p className="text-xs text-brand-600">{errors.email.message}</p>}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input id="password" type="password" {...register('password')} />
+                  {errors.password && <p className="text-xs text-brand-600">{errors.password.message}</p>}
+                </div>
+              </div>
+              <p className="text-xs text-ink-400">
+                Se creará su cuenta con esta contraseña — pásasela tú mismo por el canal que
+                prefieras. El conductor solo verá los DeCA que él mismo genere; tú los ves todos.
+              </p>
+              <Button type="submit" disabled={creating} className="self-start">
+                {creating && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Plus className="h-4 w-4" />
+                Crear conductor
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
 
@@ -190,12 +241,25 @@ export function TeamPage() {
                       )}
                       {resetSentUid === m.uid ? 'Email enviado' : 'Restablecer contraseña'}
                     </Button>
-                    {m.role !== 'admin' && (
+                    {m.uid !== user?.uid && (
                       <Button
                         variant="outline"
                         size="sm"
                         disabled={pendingUid === m.uid}
+                        onClick={() => toggleRole(m)}
+                        title={m.role === 'admin' ? 'Quitarle acceso de administrador' : 'Darle acceso de administrador'}
+                      >
+                        <UserCog className="h-3.5 w-3.5" />
+                        {m.role === 'admin' ? 'Hacer conductor' : 'Hacer admin'}
+                      </Button>
+                    )}
+                    {m.role !== 'admin' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pendingUid === m.uid || (Boolean(m.disabled) && atSeatLimit)}
                         onClick={() => toggleDisabled(m.uid, !m.disabled)}
+                        title={m.disabled && atSeatLimit ? 'Sin sitio en tu plan actual' : undefined}
                       >
                         {m.disabled ? <ShieldCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
                         {m.disabled ? 'Reactivar' : 'Desactivar'}

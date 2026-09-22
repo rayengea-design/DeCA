@@ -5,17 +5,17 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import type { DecaFormFieldValues } from '@/lib/decaFormSchema'
-import type { PartyRole } from '@/types/deca'
+import type { Company, PartyRole } from '@/types/deca'
 
 interface DecaFormFieldsProps {
   register: UseFormRegister<DecaFormFieldValues>
   control: Control<DecaFormFieldValues>
   errors: FieldErrors<DecaFormFieldValues>
   role: PartyRole
-  companyName: string
+  company: Company
 }
 
-export function DecaFormFields({ register, control, errors, role, companyName }: DecaFormFieldsProps) {
+export function DecaFormFields({ register, control, errors, role, company }: DecaFormFieldsProps) {
   return (
     <>
       <Card>
@@ -44,8 +44,8 @@ export function DecaFormFields({ register, control, errors, role, companyName }:
                     </p>
                     <p className="text-xs text-ink-400">
                       {option === 'transportista'
-                        ? `${companyName} realiza el transporte`
-                        : `${companyName} contrata el transporte`}
+                        ? `${company.nombre} realiza el transporte`
+                        : `${company.nombre} contrata el transporte`}
                     </p>
                   </button>
                 ))}
@@ -63,19 +63,24 @@ export function DecaFormFields({ register, control, errors, role, companyName }:
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
+          {/* Bloqueado a la identidad registrada de tu empresa: la suscripción
+              es por empresa, así que este lado del DeCA no puede ser una
+              empresa distinta — solo la contraparte (abajo) es libre. */}
           <div className="flex flex-col gap-1.5 sm:col-span-2">
-            <Label htmlFor="ownNombre">Nombre / Razón social</Label>
-            <Input id="ownNombre" {...register('ownNombre')} />
-            {errors.ownNombre && <p className="text-xs text-brand-600">{errors.ownNombre.message}</p>}
+            <Label>Nombre / Razón social</Label>
+            <p className="rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-700">
+              {company.nombre}
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ownNif">NIF/CIF</Label>
-            <Input id="ownNif" {...register('ownNif')} />
-            {errors.ownNif && <p className="text-xs text-brand-600">{errors.ownNif.message}</p>}
+            <Label>NIF/CIF</Label>
+            <p className="rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-700">{company.nif}</p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ownDomicilio">Domicilio (opcional)</Label>
-            <Input id="ownDomicilio" {...register('ownDomicilio')} />
+            <Label>Domicilio</Label>
+            <p className="rounded-md border border-ink-100 bg-ink-50 px-3 py-2 text-sm text-ink-700">
+              {company.domicilio}
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { AuthProvider } from '@/context/AuthContext'
+import { AdminPanelPage } from '@/pages/admin/AdminPanelPage'
 import { BillingPage } from '@/pages/BillingPage'
 import { CompanySetupPage } from '@/pages/CompanySetupPage'
 import { CorrectDecaPage } from '@/pages/CorrectDecaPage'
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/terminos" element={<TermsPage />} />
           <Route path="/privacidad" element={<PrivacyPage />} />
           <Route path="/configurar-empresa" element={<CompanySetupPage />} />
+          <Route path="/panel-admin" element={<AdminPanelPage />} />
           <Route path="/app" element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route index element={<NewDecaPage />} />

@@ -35,6 +35,31 @@ service cloud.firestore {
       return c.get('subscriptionStatus', '') in ['active', 'past_due'] || c.get('decaCount', 0) < 10;
     }
 
+    // Real enforcement of each plan's team-size cap (kept in sync by hand
+    // with PLANS/memberLimitFor in src/lib/plans.ts). A company with no
+    // active/grace-period subscription is trial-limited the same as the
+    // Básico plan, whether it's mid-trial or its trial has already expired.
+    function memberLimit(c) {
+      let subscribed = c.get('subscriptionStatus', '') in ['active', 'past_due'];
+      let plan = c.get('plan', '');
+      return !subscribed ? 3
+        : plan == 'basico' ? 3
+        : plan == 'flota' ? 10
+        : plan == 'empresa' ? 50
+        : plan == 'flota_plus' ? 999999
+        : 3;
+    }
+    // Default 0, not 1 — has to match what Firestore's `increment()` itself
+    // does to a genuinely missing field (treats it as 0), which is what a
+    // company created before `memberCount` existed will have. It undercounts
+    // that admin by one until the field starts existing, which only matters
+    // for pre-existing test data — every company created going forward
+    // always has it explicitly seeded (see companies' `create` rule below).
+    function withinMemberLimit(companyId) {
+      let c = get(/databases/$(database)/documents/companies/$(companyId)).data;
+      return c.get('memberCount', 0) < memberLimit(c);
+    }
+
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin(resource.data.companyId));
 
@@ -48,16 +73,26 @@ service cloud.firestore {
       //    admin of a company (see FIREBASE_SETUP.md).
       allow create: if signedIn() && (
         request.auth.uid == uid ||
-        (isAdmin(request.resource.data.companyId) && request.resource.data.role == 'member')
+        (isAdmin(request.resource.data.companyId) && request.resource.data.role == 'member' &&
+         withinMemberLimit(request.resource.data.companyId))
       );
 
-      // Only an admin may toggle a teammate's `disabled` flag — nothing else
-      // about a profile (companyId, role, email...) can ever change, and an
-      // admin can't disable themselves (that would be an unrecoverable
-      // lockout with no one left to undo it).
-      allow update: if signedIn() && isAdmin(resource.data.companyId) &&
-        uid != request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disabled']);
+      // An admin may act on a teammate (never on themselves — that's what
+      // `uid != request.auth.uid` rules out both times below, which is also
+      // what makes it impossible to ever end up with zero admins through
+      // this UI: whoever performs the change is necessarily still an admin
+      // afterwards), in exactly two shapes:
+      // 1. Toggle `disabled`. Disabling always frees a seat, so it's always
+      //    allowed; re-enabling uses one again, so it re-checks the plan's
+      //    seat limit just like creating a new teammate would.
+      // 2. Change `role` between 'admin' and 'member' — doesn't touch the
+      //    seat count either way, it's still one active account.
+      allow update: if signedIn() && isAdmin(resource.data.companyId) && uid != request.auth.uid && (
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disabled']) &&
+          (request.resource.data.disabled == true || withinMemberLimit(resource.data.companyId))) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) &&
+          request.resource.data.role in ['admin', 'member'])
+      );
       allow delete: if false;
     }
 
@@ -72,10 +107,11 @@ service cloud.firestore {
     // identity), and only those same fields.
     match /companies/{companyId} {
       allow create: if signedIn() &&
-        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount']) &&
-        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount']) &&
+        request.resource.data.keys().hasOnly(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount', 'memberCount']) &&
+        request.resource.data.keys().hasAll(['id', 'nombre', 'nif', 'domicilio', 'createdAt', 'decaCount', 'memberCount']) &&
         request.resource.data.id == companyId &&
-        request.resource.data.decaCount == 0;
+        request.resource.data.decaCount == 0 &&
+        request.resource.data.memberCount == 1;
       allow read: if isMember(companyId);
       allow update: if isAdmin(companyId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'nif', 'domicilio']);
@@ -86,6 +122,14 @@ service cloud.firestore {
       allow update: if isMember(companyId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['decaCount']) &&
         request.resource.data.decaCount == resource.data.get('decaCount', 0) + 1;
+      // The team-seat counter, on the other hand, only ever changes as a
+      // side effect of an admin action (creating, disabling or re-enabling a
+      // teammate — see the matching writeBatch calls in teamService.ts), so
+      // only an admin may move it, by exactly 1 in either direction.
+      allow update: if isAdmin(companyId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']) &&
+        (request.resource.data.memberCount == resource.data.get('memberCount', 0) + 1 ||
+         request.resource.data.memberCount == resource.data.get('memberCount', 0) - 1);
       allow delete: if false;
 
       match /decaDocs/{docId} {
@@ -105,6 +149,14 @@ service cloud.firestore {
           (isAdmin(companyId) || resource.data.createdBy == request.auth.uid) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'hidden', 'supersededBy']);
         allow delete: if false;
+      }
+
+      // Saved trip presets (recurring counterpart/mercancía/ruta) are pure
+      // user convenience, not legal document data — unlike decaDocs, any
+      // member can freely create, edit or delete their company's own, with
+      // no field-level lock.
+      match /savedTrips/{tripId} {
+        allow read, create, update, delete: if isMember(companyId);
       }
     }
   }

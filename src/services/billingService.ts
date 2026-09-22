@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth'
-import type { PlanId } from '@/types/deca'
+import type { SelfServePlanId } from '@/types/deca'
 
 async function callBillingApi(path: string, user: User, body?: Record<string, unknown>): Promise<{ url: string }> {
   const idToken = await user.getIdToken()
@@ -13,7 +13,7 @@ async function callBillingApi(path: string, user: User, body?: Record<string, un
   return data
 }
 
-export async function startCheckout(user: User, plan: PlanId): Promise<string> {
+export async function startCheckout(user: User, plan: SelfServePlanId): Promise<string> {
   const { url } = await callBillingApi('/api/stripe/create-checkout-session', user, { plan })
   return url
 }
