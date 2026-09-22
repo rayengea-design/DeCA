@@ -5,13 +5,13 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { DecaFormFields } from '@/components/deca/DecaFormFields'
+import { SavedTripPicker } from '@/components/deca/SavedTripPicker'
 import { MissingCompanyInfoNotice } from '@/components/MissingCompanyInfoNotice'
 import { TrialExhaustedNotice } from '@/components/TrialExhaustedNotice'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { useAuth } from '@/context/AuthContext'
 import { decaFormSchema, type DecaFormFieldValues } from '@/lib/decaFormSchema'
 import { isTrialExhausted } from '@/lib/trial'
@@ -66,9 +66,7 @@ export function NewDecaPage() {
   if (company && isTrialExhausted(company)) return <TrialExhaustedNotice />
   if (company && (!company.nif || !company.domicilio)) return <MissingCompanyInfoNotice />
 
-  function applySavedTrip(tripId: string) {
-    const trip = savedTrips.find((t) => t.id === tripId)
-    if (!trip) return
+  function applySavedTrip(trip: SavedTrip) {
     reset({
       ownRole: role,
       counterpartNombre: trip.counterpartNombre,
@@ -238,18 +236,7 @@ export function NewDecaPage() {
           </CardHeader>
           {savedTrips.length > 0 && (
             <CardContent>
-              <Select onValueChange={applySavedTrip}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Rellenar desde un viaje guardado…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {savedTrips.map((trip) => (
-                    <SelectItem key={trip.id} value={trip.id}>
-                      {trip.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SavedTripPicker trips={savedTrips} onSelect={applySavedTrip} />
             </CardContent>
           )}
         </Card>
