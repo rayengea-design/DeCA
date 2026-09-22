@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin'
-import { PRICE_IDS, stripe, type PlanId } from '../_lib/stripe'
+import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -12,6 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { email, companyRef, company } = await requireCompanyAdmin(req)
+    const stripe = getStripe()
     const origin = `https://${req.headers.host}`
 
     let customerId = company.stripeCustomerId as string | undefined

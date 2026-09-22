@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type Stripe from 'stripe'
-import { adminDb } from '../_lib/firebaseAdmin'
-import { PRICE_IDS, stripe } from '../_lib/stripe'
+import { getAdminDb } from '../_lib/firebaseAdmin'
+import { getStripe, PRICE_IDS } from '../_lib/stripe'
 
 // Stripe signature verification needs the exact raw request body — Vercel's
 // default JSON body parsing would re-serialize it and break the signature.
@@ -37,7 +37,7 @@ async function syncSubscription(subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id
   const item = subscription.items.data[0]
 
-  await adminDb
+  await getAdminDb()
     .collection('companies')
     .doc(companyId)
     .update({
@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let event: Stripe.Event
   try {
     const rawBody = await readRawBody(req)
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret)
+    event = getStripe().webhooks.constructEvent(rawBody, signature, webhookSecret)
   } catch (err) {
     console.error('Firma de webhook inválida', err)
     return res.status(400).send('Firma inválida')
@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         if (session.mode === 'subscription' && session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+          const subscription = await getStripe().subscriptions.retrieve(session.subscription as string)
           await syncSubscription(subscription)
         }
         break

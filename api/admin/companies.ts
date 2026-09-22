@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { adminDb } from '../_lib/firebaseAdmin'
+import { getAdminDb } from '../_lib/firebaseAdmin'
 import { ApiError } from '../_lib/requireCompanyAdmin'
 import { requirePlatformAdmin } from '../_lib/requirePlatformAdmin'
 
@@ -9,7 +9,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await requirePlatformAdmin(req)
 
-    const snap = await adminDb.collection('companies').orderBy('createdAt', 'desc').get()
+    const snap = await getAdminDb().collection('companies').orderBy('createdAt', 'desc').get()
     const companies = snap.docs.map((d) => {
       const c = d.data()
       return {

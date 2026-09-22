@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin'
-import { stripe } from '../_lib/stripe'
+import { getStripe } from '../_lib/stripe'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!customerId) return res.status(400).json({ error: 'Esta empresa todavía no tiene una suscripción' })
 
     const origin = `https://${req.headers.host}`
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/app/facturacion`,
     })

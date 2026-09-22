@@ -1,6 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { adminDb } from '../_lib/firebaseAdmin'
+import { getAdminDb } from '../_lib/firebaseAdmin'
 import { ApiError } from '../_lib/requireCompanyAdmin'
 import { requirePlatformAdmin } from '../_lib/requirePlatformAdmin'
 
@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Plan inválido' })
     }
 
-    const companyRef = adminDb.collection('companies').doc(companyId)
+    const companyRef = getAdminDb().collection('companies').doc(companyId)
     const snap = await companyRef.get()
     if (!snap.exists) return res.status(404).json({ error: 'No se encontró la empresa' })
 

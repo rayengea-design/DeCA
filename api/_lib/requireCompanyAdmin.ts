@@ -1,5 +1,5 @@
 import type { VercelRequest } from '@vercel/node'
-import { adminAuth, adminDb } from './firebaseAdmin'
+import { getAdminAuth, getAdminDb } from './firebaseAdmin'
 
 export class ApiError extends Error {
   status: number
@@ -19,9 +19,10 @@ export async function requireCompanyAdmin(req: VercelRequest) {
   const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
   if (!idToken) throw new ApiError(401, 'Falta el token de autenticación')
 
-  const decoded = await adminAuth.verifyIdToken(idToken).catch(() => null)
+  const decoded = await getAdminAuth().verifyIdToken(idToken).catch(() => null)
   if (!decoded) throw new ApiError(401, 'Token inválido o caducado')
 
+  const adminDb = getAdminDb()
   const profileSnap = await adminDb.collection('users').doc(decoded.uid).get()
   const profile = profileSnap.data()
   if (!profile) throw new ApiError(403, 'No se encontró el perfil del usuario')

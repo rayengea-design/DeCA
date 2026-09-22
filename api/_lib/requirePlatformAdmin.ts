@@ -1,5 +1,5 @@
 import type { VercelRequest } from '@vercel/node'
-import { adminAuth } from './firebaseAdmin'
+import { getAdminAuth } from './firebaseAdmin'
 import { ApiError } from './requireCompanyAdmin'
 
 /** Platform-level admin (you, running DeCA as a business) — completely
@@ -13,7 +13,7 @@ export async function requirePlatformAdmin(req: VercelRequest) {
   const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null
   if (!idToken) throw new ApiError(401, 'Falta el token de autenticación')
 
-  const decoded = await adminAuth.verifyIdToken(idToken).catch(() => null)
+  const decoded = await getAdminAuth().verifyIdToken(idToken).catch(() => null)
   if (!decoded || !decoded.email) throw new ApiError(401, 'Token inválido o caducado')
 
   const allowlist = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
