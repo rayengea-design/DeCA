@@ -26,6 +26,12 @@ interface AuthContextValue {
   company: Company | null
   loading: boolean
   emailVerified: boolean
+  /** True once we know for sure the verification email sent at signup
+   * failed (e.g. Firebase's own send-rate limit) — lets VerifyEmailGate
+   * say so honestly instead of claiming "te hemos enviado un email" when
+   * nothing went out. Undefined until a signup has actually been attempted
+   * this session. */
+  verificationEmailFailed: boolean | undefined
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<User>
@@ -49,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // handing back a new object, so a component reading `user.emailVerified`
   // wouldn't re-render when it changes — a plain boolean state does.
   const [emailVerified, setEmailVerified] = useState(false)
+  const [verificationEmailFailed, setVerificationEmailFailed] = useState<boolean | undefined>(undefined)
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (u) => {
@@ -109,14 +116,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signup(email: string, password: string) {
     const credential = await createUserWithEmailAndPassword(auth, email, password)
-    // Best-effort — a signup shouldn't fail just because the verification
-    // email couldn't be sent (e.g. Firebase's own rate limit). Verified
-    // status matters for one thing only: requirePlatformAdmin.ts checks it
-    // before granting access to /panel-admin's backend, since Firebase
-    // Auth otherwise lets anyone create a password account under an email
-    // they don't own — without this, someone could self-register the
-    // platform admin's own email and claim that access first.
-    await sendEmailVerification(credential.user).catch(() => {})
+    // The signup itself shouldn't fail just because the verification email
+    // couldn't be sent (e.g. Firebase's own send-rate limit) — but silently
+    // swallowing that error entirely would leave VerifyEmailGate telling the
+    // user "te hemos enviado un email" when nothing went out. Track it
+    // instead, so that screen can be honest and point at "Reenviar email".
+    try {
+      await sendEmailVerification(credential.user)
+      setVerificationEmailFailed(false)
+    } catch {
+      setVerificationEmailFailed(true)
+    }
   }
 
   async function resetPassword(email: string) {
@@ -125,7 +135,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function resendVerificationEmail() {
     if (!auth.currentUser) throw new Error('No hay ninguna sesión activa')
-    await sendEmailVerification(auth.currentUser)
+    try {
+      await sendEmailVerification(auth.currentUser)
+      setVerificationEmailFailed(false)
+    } catch (err) {
+      setVerificationEmailFailed(true)
+      throw err
+    }
   }
 
   /** Re-fetches the signed-in user's status from Firebase (there's no live
@@ -203,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         company,
         loading,
         emailVerified,
+        verificationEmailFailed,
         login,
         signup,
         loginWithGoogle,

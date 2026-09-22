@@ -14,8 +14,13 @@ import { useAuth } from '@/context/AuthContext'
  * sends a verification email and never routes through this page — is never
  * affected. Google accounts skip this entirely; Google already verifies the
  * email before Firebase ever sees it. */
+function isRateLimitError(err: unknown): boolean {
+  return err instanceof Error && 'code' in err && (err as { code: string }).code === 'auth/too-many-requests'
+}
+
 export function VerifyEmailGate() {
-  const { user, loading, emailVerified, resendVerificationEmail, checkEmailVerified } = useAuth()
+  const { user, loading, emailVerified, verificationEmailFailed, resendVerificationEmail, checkEmailVerified } =
+    useAuth()
   const [resent, setResent] = useState(false)
   const [resending, setResending] = useState(false)
   const [checking, setChecking] = useState(false)
@@ -41,8 +46,12 @@ export function VerifyEmailGate() {
     try {
       await resendVerificationEmail()
       setResent(true)
-    } catch {
-      setError('No se pudo reenviar el email. Espera unos minutos e inténtalo de nuevo.')
+    } catch (err) {
+      setError(
+        isRateLimitError(err)
+          ? 'Se han pedido demasiados envíos seguidos — Firebase bloquea el envío durante un rato. Espera unos 30-60 minutos e inténtalo de nuevo.'
+          : 'No se pudo reenviar el email. Espera unos minutos e inténtalo de nuevo.',
+      )
     } finally {
       setResending(false)
     }
@@ -71,10 +80,18 @@ export function VerifyEmailGate() {
           <Mail className="h-8 w-8 text-brand-500" />
           <div>
             <p className="font-semibold text-ink-900">Confirma tu email</p>
-            <p className="mt-1 text-sm text-ink-400">
-              Te hemos enviado un enlace de confirmación a <strong>{user.email}</strong>. Ábrelo para
-              poder configurar tu empresa — así comprobamos que el email es real.
-            </p>
+            {verificationEmailFailed ? (
+              <p className="mt-1 text-sm text-ink-400">
+                No hemos podido enviar el email de confirmación a <strong>{user.email}</strong> todavía
+                (puede que se haya superado el límite de envíos por ahora). Pulsa "Reenviar email" para
+                intentarlo de nuevo — puede que tengas que esperar unos minutos.
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-ink-400">
+                Te hemos enviado un enlace de confirmación a <strong>{user.email}</strong>. Ábrelo para
+                poder configurar tu empresa — así comprobamos que el email es real.
+              </p>
+            )}
           </div>
           {error && (
             <div className="flex w-full items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-left text-sm text-brand-700">
