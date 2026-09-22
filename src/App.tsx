@@ -33,6 +33,9 @@ const PrivacyPage = lazy(() => import('@/pages/PrivacyPage').then((m) => ({ defa
 const SignupPage = lazy(() => import('@/pages/SignupPage').then((m) => ({ default: m.SignupPage })))
 const TeamPage = lazy(() => import('@/pages/TeamPage').then((m) => ({ default: m.TeamPage })))
 const TermsPage = lazy(() => import('@/pages/TermsPage').then((m) => ({ default: m.TermsPage })))
+const VerifyEmailGate = lazy(() =>
+  import('@/components/VerifyEmailGate').then((m) => ({ default: m.VerifyEmailGate })),
+)
 
 // Also lazy, and deliberately NOT wrapping the landing page: AuthProvider's
 // module pulls in the whole Firebase SDK (auth + firestore + storage) as a
@@ -71,7 +74,9 @@ export default function App() {
             <Route path="/registro" element={<SignupPage />} />
             <Route path="/terminos" element={<TermsPage />} />
             <Route path="/privacidad" element={<PrivacyPage />} />
-            <Route path="/configurar-empresa" element={<CompanySetupPage />} />
+            <Route element={<VerifyEmailGate />}>
+              <Route path="/configurar-empresa" element={<CompanySetupPage />} />
+            </Route>
             <Route path="/panel-admin" element={<AdminPanelPage />} />
             <Route path="/app" element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>

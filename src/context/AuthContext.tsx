@@ -25,12 +25,15 @@ interface AuthContextValue {
   profile: UserProfile | null
   company: Company | null
   loading: boolean
+  emailVerified: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<void>
   loginWithGoogle: () => Promise<User>
   logout: () => Promise<void>
   setupCompany: (input: CompanySetupInput) => Promise<void>
   resetPassword: (email: string) => Promise<void>
+  resendVerificationEmail: () => Promise<void>
+  checkEmailVerified: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -40,10 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
+  // Tracked separately from `user`, not read off `user.emailVerified`
+  // directly: `User.reload()` (see checkEmailVerified below) mutates the
+  // existing Firebase User object's internal state in place rather than
+  // handing back a new object, so a component reading `user.emailVerified`
+  // wouldn't re-render when it changes — a plain boolean state does.
+  const [emailVerified, setEmailVerified] = useState(false)
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (u) => {
       setUser(u)
+      setEmailVerified(u?.emailVerified ?? false)
       if (!u) {
         setProfile(null)
         setCompany(null)
@@ -113,6 +123,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email)
   }
 
+  async function resendVerificationEmail() {
+    if (!auth.currentUser) throw new Error('No hay ninguna sesión activa')
+    await sendEmailVerification(auth.currentUser)
+  }
+
+  /** Re-fetches the signed-in user's status from Firebase (there's no live
+   * listener for "the user clicked the link in another tab") — call this
+   * from a "ya confirmé mi email" button rather than polling. */
+  async function checkEmailVerified(): Promise<boolean> {
+    if (!auth.currentUser) return false
+    await auth.currentUser.reload()
+    const verified = auth.currentUser.emailVerified
+    setEmailVerified(verified)
+    return verified
+  }
+
   // Works for both signup and login — Firebase treats a Google sign-in as
   // "the account already exists" if that Google email has signed in before,
   // or creates a brand-new Auth user otherwise. Either way the caller ends
@@ -171,7 +197,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, company, loading, login, signup, loginWithGoogle, logout, setupCompany, resetPassword }}
+      value={{
+        user,
+        profile,
+        company,
+        loading,
+        emailVerified,
+        login,
+        signup,
+        loginWithGoogle,
+        logout,
+        setupCompany,
+        resetPassword,
+        resendVerificationEmail,
+        checkEmailVerified,
+      }}
     >
       {children}
     </AuthContext.Provider>

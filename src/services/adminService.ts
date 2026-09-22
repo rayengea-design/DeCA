@@ -16,6 +16,14 @@ export interface AdminCompanyRow {
   cancelAtPeriodEnd: boolean
 }
 
+export class AdminApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
 async function callAdminApi(path: string, user: User, init?: RequestInit) {
   const idToken = await user.getIdToken()
   const res = await fetch(path, {
@@ -23,7 +31,7 @@ async function callAdminApi(path: string, user: User, init?: RequestInit) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}`, ...init?.headers },
   })
   const data = await res.json().catch(() => null)
-  if (!res.ok || !data) throw new Error(data?.error ?? 'No se pudo completar la solicitud')
+  if (!res.ok || !data) throw new AdminApiError(res.status, data?.error ?? 'No se pudo completar la solicitud')
   return data
 }
 

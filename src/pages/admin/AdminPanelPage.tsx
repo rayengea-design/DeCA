@@ -7,28 +7,43 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext'
 import { daysUntilPeriodEnd, PLAN_NAMES } from '@/lib/plans'
 import { formatDate } from '@/lib/utils'
-import { type AdminCompanyRow, grantPlan, listAllCompanies } from '@/services/adminService'
+import { AdminApiError, type AdminCompanyRow, grantPlan, listAllCompanies } from '@/services/adminService'
 import type { PlanId } from '@/types/deca'
 
 const GRANTABLE_PLANS: PlanId[] = ['basico', 'flota', 'empresa', 'flota_plus']
 
 export function AdminPanelPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, loginWithGoogle } = useAuth()
   const [companies, setCompanies] = useState<AdminCompanyRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [forbidden, setForbidden] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [selectedPlan, setSelectedPlan] = useState<Record<string, PlanId>>({})
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   useEffect(() => {
     if (!user) return
     listAllCompanies(user)
-      .then(setCompanies)
+      .then((data) => {
+        setForbidden(false)
+        setCompanies(data)
+      })
       .catch((err) => {
-        if (err instanceof Error && err.message.includes('acceso')) setForbidden(true)
+        if (err instanceof AdminApiError && err.status === 403) setForbidden(true)
         else setError('No se pudo cargar la lista de empresas.')
       })
   }, [user])
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true)
+    try {
+      await loginWithGoogle()
+    } catch {
+      setError('No se pudo iniciar sesión con Google. Inténtalo de nuevo.')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   if (!authLoading && !user) return <Navigate to="/login" replace />
 
@@ -72,6 +87,20 @@ export function AdminPanelPage() {
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-ink-50 px-4 text-center">
         <ShieldOff className="h-8 w-8 text-ink-400" />
         <p className="font-semibold text-ink-900">No tienes acceso a esta página</p>
+        <p className="max-w-sm text-sm text-ink-400">
+          El panel de administración solo se puede usar iniciando sesión con Google, con el email
+          autorizado.
+        </p>
+        <Button type="button" variant="outline" disabled={googleLoading} onClick={handleGoogleSignIn}>
+          {googleLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          Continuar con Google
+        </Button>
+        {error && (
+          <div className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
       </div>
     )
   }
