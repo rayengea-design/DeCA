@@ -34,20 +34,33 @@ async function syncSubscription(subscription: Stripe.Subscription) {
     return
   }
 
+  const adminDb = await getAdminDb()
+  const companyRef = adminDb.collection('companies').doc(companyId)
+
+  // A comped company's plan is admin-controlled and must stay unlimited
+  // until the admin explicitly revokes it (api/admin/grant-plan.ts) — never
+  // silently downgraded or expired by a Stripe event. This matters even
+  // though grant-plan.ts never touches Stripe itself: this same handler
+  // fires for ANY subscription tied to this companyId via metadata,
+  // including one from *before* the comp (e.g. a real paying customer who
+  // later got a gifted plan on top) — without this guard, a delayed webhook
+  // for that old subscription could overwrite the gift.
+  const companySnap = await companyRef.get()
+  if (companySnap.data()?.comped) {
+    console.log('Ignorando webhook de suscripción: empresa con plan regalado', companyId)
+    return
+  }
+
   const priceId = subscription.items.data[0]?.price.id
   const item = subscription.items.data[0]
 
-  const adminDb = await getAdminDb()
-  await adminDb
-    .collection('companies')
-    .doc(companyId)
-    .update({
-      stripeSubscriptionId: subscription.id,
-      subscriptionStatus: subscription.status,
-      plan: planFromPriceId(priceId) ?? null,
-      currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    })
+  await companyRef.update({
+    stripeSubscriptionId: subscription.id,
+    subscriptionStatus: subscription.status,
+    plan: planFromPriceId(priceId) ?? null,
+    currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+  })
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileText, Loader2, Users } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileText, Gift, Loader2, Users, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useSearchParams } from 'react-router-dom'
@@ -11,14 +11,20 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
 import { daysUntilPeriodEnd, memberLimitFor, PLAN_NAMES, PLANS, WHATSAPP_CONTACT_URL } from '@/lib/plans'
+import { isValidSpanishTaxId } from '@/lib/spanishTaxId'
 import { daysSinceSignup, isSubscribed, TRIAL_DAY_LIMIT, TRIAL_DOC_LIMIT } from '@/lib/trial'
 import { formatDate } from '@/lib/utils'
-import { changePlan, createSubscriptionIntent, openBillingPortal } from '@/services/billingService'
+import {
+  changePlan,
+  createSubscriptionIntent,
+  openBillingPortal,
+  setSubscriptionCancellation,
+} from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
 import type { SelfServePlanId } from '@/types/deca'
 
 const infoSchema = z.object({
-  nif: z.string().min(3, 'Obligatorio'),
+  nif: z.string().refine(isValidSpanishTaxId, 'Introduce un NIF, NIE o CIF válido (ej. 12345678Z o B12345678)'),
   domicilio: z.string().min(5, 'Obligatorio'),
 })
 
@@ -35,6 +41,8 @@ export function BillingPage() {
   const [planChanged, setPlanChanged] = useState<SelfServePlanId | null>(null)
   const [checkout, setCheckout] = useState<{ plan: SelfServePlanId; clientSecret: string } | null>(null)
   const [paymentSucceeded, setPaymentSucceeded] = useState(false)
+  const [cancelPending, setCancelPending] = useState(false)
+  const [cancelToggled, setCancelToggled] = useState<'cancel' | 'resume' | null>(null)
 
   const {
     register,
@@ -89,6 +97,28 @@ export function BillingPage() {
     }
   }
 
+  async function handleToggleCancel(cancel: boolean) {
+    if (
+      cancel &&
+      !window.confirm(
+        '¿Cancelar tu suscripción? Mantendrás acceso hasta el final del periodo ya pagado, luego pasa a prueba caducada.',
+      )
+    ) {
+      return
+    }
+    setBillingError(null)
+    setCancelToggled(null)
+    setCancelPending(true)
+    try {
+      await setSubscriptionCancellation(user!, cancel)
+      setCancelToggled(cancel ? 'cancel' : 'resume')
+    } catch (err) {
+      setBillingError(err instanceof Error ? err.message : 'No se pudo actualizar la suscripción.')
+    } finally {
+      setCancelPending(false)
+    }
+  }
+
   async function handleManageBilling() {
     setBillingError(null)
     setRedirecting('portal')
@@ -121,6 +151,14 @@ export function BillingPage() {
           Pago completado. Puede tardar unos segundos en reflejarse aquí.
         </div>
       )}
+      {cancelToggled && (
+        <div className="flex items-center gap-2 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {cancelToggled === 'cancel'
+            ? 'Suscripción cancelada. Puede tardar unos segundos en reflejarse aquí.'
+            : 'Suscripción reanudada. Puede tardar unos segundos en reflejarse aquí.'}
+        </div>
+      )}
       {checkoutResult === 'cancelado' && (
         <div className="flex items-center gap-2 rounded-md bg-ink-50 px-4 py-3 text-sm text-ink-600">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -145,25 +183,41 @@ export function BillingPage() {
                 {subscribed ? `Plan ${PLAN_NAMES[company.plan ?? 'basico']}` : 'Prueba gratis'}
               </p>
               <p className="text-sm text-ink-400">
-                {subscribed
-                  ? company.subscriptionStatus === 'past_due'
-                    ? 'Hay un problema con tu último cobro — revisa tu método de pago.'
-                    : 'Suscripción activa.'
-                  : docsUsed >= TRIAL_DOC_LIMIT || daysRemaining <= 0
-                    ? 'Tu periodo de prueba ha terminado.'
-                    : `Hasta ${TRIAL_DOC_LIMIT} DeCA o ${TRIAL_DAY_LIMIT} días, lo que llegue antes.`}
+                {company.comped
+                  ? 'Plan regalado por el equipo de DeCA — sin fecha de caducidad.'
+                  : subscribed
+                    ? company.subscriptionStatus === 'past_due'
+                      ? 'Hay un problema con tu último cobro — revisa tu método de pago.'
+                      : 'Suscripción activa.'
+                    : docsUsed >= TRIAL_DOC_LIMIT || daysRemaining <= 0
+                      ? 'Tu periodo de prueba ha terminado.'
+                      : `Hasta ${TRIAL_DOC_LIMIT} DeCA o ${TRIAL_DAY_LIMIT} días, lo que llegue antes.`}
               </p>
             </div>
             <span
               className={
                 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ' +
-                (subscribed && company.subscriptionStatus !== 'past_due'
-                  ? 'bg-green-50 text-green-700'
-                  : 'bg-brand-50 text-brand-700')
+                (company.comped
+                  ? 'bg-purple-50 text-purple-700'
+                  : subscribed && company.subscriptionStatus !== 'past_due'
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-brand-50 text-brand-700')
               }
             >
-              {subscribed ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-              {subscribed ? (company.subscriptionStatus === 'past_due' ? 'Pago pendiente' : 'Activo') : 'En prueba'}
+              {company.comped ? (
+                <Gift className="h-3.5 w-3.5" />
+              ) : subscribed ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <Clock className="h-3.5 w-3.5" />
+              )}
+              {company.comped
+                ? 'Regalado'
+                : subscribed
+                  ? company.subscriptionStatus === 'past_due'
+                    ? 'Pago pendiente'
+                    : 'Activo'
+                  : 'En prueba'}
             </span>
           </div>
 
@@ -223,6 +277,15 @@ export function BillingPage() {
                 </div>
               </div>
             )}
+            {company.comped && (
+              <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
+                <Gift className="h-5 w-5 shrink-0 text-ink-400" />
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">Sin caducidad</p>
+                  <p className="text-xs text-ink-400">Mientras el equipo de DeCA no lo cambie</p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 rounded-md border border-ink-100 px-4 py-3">
               <Users className="h-5 w-5 shrink-0 text-ink-400" />
               <div>
@@ -233,18 +296,45 @@ export function BillingPage() {
               </div>
             </div>
           </div>
-          {subscribed && company.cancelAtPeriodEnd && (
+          {subscribed && !company.comped && company.cancelAtPeriodEnd && (
             <div className="flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-700">
               <AlertCircle className="h-4 w-4 shrink-0" />
               Has cancelado tu suscripción — sigues teniendo acceso hasta esa fecha, luego pasa a prueba caducada.
             </div>
           )}
 
-          {subscribed && (
-            <Button onClick={handleManageBilling} disabled={redirecting !== null} className="self-start">
-              {redirecting === 'portal' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-              Gestionar facturación
-            </Button>
+          {subscribed && !company.comped && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={handleManageBilling} disabled={redirecting !== null} className="self-start">
+                {redirecting === 'portal' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4" />
+                )}
+                Gestionar facturación
+              </Button>
+              {company.cancelAtPeriodEnd ? (
+                <Button
+                  variant="outline"
+                  onClick={() => handleToggleCancel(false)}
+                  disabled={cancelPending}
+                  className="self-start"
+                >
+                  {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Reanudar suscripción
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={() => handleToggleCancel(true)}
+                  disabled={cancelPending}
+                  className="self-start text-ink-500"
+                >
+                  {cancelPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                  Cancelar suscripción
+                </Button>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

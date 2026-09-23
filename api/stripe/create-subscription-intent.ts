@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type Stripe from 'stripe'
-import { ensureStripeCustomer } from '../_lib/customerFiscalSync.js'
+import { ensureStripeCustomer, FiscalSyncError } from '../_lib/customerFiscalSync.js'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe.js'
 
@@ -67,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ clientSecret })
   } catch (err) {
     if (err instanceof ApiError) return res.status(err.status).json({ error: err.message })
+    if (err instanceof FiscalSyncError) return res.status(400).json({ error: err.message })
     console.error('create-subscription-intent error', err)
     return res.status(500).json({ error: 'No se pudo iniciar el pago' })
   }

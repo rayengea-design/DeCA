@@ -10,10 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { useAuth } from '@/context/AuthContext'
+import { isValidSpanishTaxId } from '@/lib/spanishTaxId'
 
 const schema = z.object({
   nombre: z.string().min(2, 'Obligatorio'),
-  nif: z.string().min(3, 'Obligatorio'),
+  nif: z.string().refine(isValidSpanishTaxId, 'Introduce un NIF, NIE o CIF válido (ej. 12345678Z o B12345678)'),
   domicilio: z.string().min(5, 'Obligatorio'),
 })
 

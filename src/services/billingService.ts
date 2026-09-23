@@ -29,3 +29,9 @@ export async function openBillingPortal(user: User): Promise<string> {
 export async function changePlan(user: User, plan: SelfServePlanId): Promise<void> {
   await callBillingApi('/api/stripe/change-plan', user, { plan })
 }
+
+/** `cancel: true` cancels at the end of the current billing period (access
+ * continues until then); `false` undoes that before the period ends. */
+export async function setSubscriptionCancellation(user: User, cancel: boolean): Promise<void> {
+  await callBillingApi('/api/stripe/cancel-subscription', user, { cancel })
+}
