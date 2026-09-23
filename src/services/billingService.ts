@@ -26,8 +26,14 @@ export async function openBillingPortal(user: User): Promise<string> {
   return url as string
 }
 
-export async function changePlan(user: User, plan: SelfServePlanId): Promise<void> {
-  await callBillingApi('/api/stripe/change-plan', user, { plan })
+export interface ChangePlanResult {
+  charged: number | null
+  currency: string | null
+}
+
+export async function changePlan(user: User, plan: SelfServePlanId): Promise<ChangePlanResult> {
+  const data = await callBillingApi('/api/stripe/change-plan', user, { plan })
+  return { charged: (data.charged as number | null) ?? null, currency: (data.currency as string | null) ?? null }
 }
 
 /** `cancel: true` cancels at the end of the current billing period (access

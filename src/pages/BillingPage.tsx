@@ -38,7 +38,9 @@ export function BillingPage() {
   const [infoError, setInfoError] = useState<string | null>(null)
   const [redirecting, setRedirecting] = useState<SelfServePlanId | 'portal' | null>(null)
   const [billingError, setBillingError] = useState<string | null>(null)
-  const [planChanged, setPlanChanged] = useState<SelfServePlanId | null>(null)
+  const [planChanged, setPlanChanged] = useState<{ plan: SelfServePlanId; charged: number | null; currency: string | null } | null>(
+    null,
+  )
   const [checkout, setCheckout] = useState<{ plan: SelfServePlanId; clientSecret: string } | null>(null)
   const [paymentSucceeded, setPaymentSucceeded] = useState(false)
   const [cancelPending, setCancelPending] = useState(false)
@@ -84,12 +86,20 @@ export function BillingPage() {
   }
 
   async function handleChangePlan(plan: SelfServePlanId) {
+    const target = PLANS.find((p) => p.id === plan)
+    if (
+      !window.confirm(
+        `¿Cambiar a ${PLAN_NAMES[plan]} (${target?.price ?? ''})? Se te cobrará ahora mismo la diferencia prorrateada de lo que queda de este periodo con tu método de pago guardado.`,
+      )
+    ) {
+      return
+    }
     setBillingError(null)
     setPlanChanged(null)
     setRedirecting(plan)
     try {
-      await changePlan(user!, plan)
-      setPlanChanged(plan)
+      const { charged, currency } = await changePlan(user!, plan)
+      setPlanChanged({ plan, charged, currency })
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : 'No se pudo cambiar de plan.')
     } finally {
@@ -393,7 +403,10 @@ export function BillingPage() {
           {planChanged && (
             <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Plan cambiado a {PLAN_NAMES[planChanged]}. Puede tardar unos segundos en reflejarse aquí.
+              Plan cambiado a {PLAN_NAMES[planChanged.plan]}.{' '}
+              {planChanged.charged
+                ? `Se te han cobrado ${(planChanged.charged / 100).toFixed(2)}${planChanged.currency === 'eur' ? '€' : ' ' + planChanged.currency} (diferencia prorrateada de este periodo).`
+                : 'No se te ha cobrado nada ahora — el nuevo importe se aplicará en tu próxima renovación.'}
             </div>
           )}
           {checkout ? (
