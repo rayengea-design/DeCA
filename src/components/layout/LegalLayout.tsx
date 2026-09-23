@@ -27,6 +27,17 @@ export function LegalLayout({ title, updatedAt, children }: LegalLayoutProps) {
         <div className="mt-8 flex flex-col gap-6 text-sm leading-relaxed text-ink-600 [&_h2]:mt-2 [&_h2]:font-heading [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-ink-900 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5">
           {children}
         </div>
+        <nav className="mt-12 flex flex-wrap gap-4 border-t border-ink-100 pt-6 text-sm text-ink-500">
+          <Link to="/terminos" className="hover:text-ink-900">
+            Términos de Servicio
+          </Link>
+          <Link to="/privacidad" className="hover:text-ink-900">
+            Política de Privacidad
+          </Link>
+          <Link to="/aviso-legal" className="hover:text-ink-900">
+            Aviso Legal
+          </Link>
+        </nav>
       </main>
     </div>
   )

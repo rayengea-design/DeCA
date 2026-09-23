@@ -4,7 +4,7 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 export function TermsPage() {
   useDocumentMeta('Términos de Servicio | DeCA', 'Términos de Servicio de DeCA, operado por Grupo Noveldi SL.')
   return (
-    <LegalLayout title="Términos de Servicio" updatedAt="22 de septiembre de 2026">
+    <LegalLayout title="Términos de Servicio" updatedAt="23 de septiembre de 2026">
       <section>
         <h2>1. Quiénes somos</h2>
         <p>
@@ -50,16 +50,19 @@ export function TermsPage() {
       <section>
         <h2>4. Precio, facturación y cancelación</h2>
         <p>
-          Los planes de pago disponibles y sus precios se muestran en la página de precios de DeCA. La contratación,
-          renovación y cobro de las suscripciones se gestiona a través de nuestro proveedor de pagos (Stripe), que
-          actúa como encargado del tratamiento de los datos de pago; DeCA no almacena datos de tarjeta en sus propios
-          sistemas. Las facturas correspondientes a cada cobro se emiten y envían automáticamente a la dirección de
-          email de la cuenta.
+          Los planes de pago disponibles y sus precios se muestran en la página de precios de DeCA. La suscripción se
+          renueva automáticamente cada mes hasta que se cancele; el cobro se realiza al método de pago guardado el
+          mismo día de cada renovación. La contratación, renovación y cobro se gestionan a través de nuestro
+          proveedor de pagos (Stripe), que actúa como encargado del tratamiento de los datos de pago; DeCA no
+          almacena datos de tarjeta en sus propios sistemas. Las facturas correspondientes a cada cobro se emiten y
+          envían automáticamente a la dirección de email de la cuenta.
         </p>
         <p>
           El Cliente puede cancelar su suscripción en cualquier momento desde su panel de facturación, sin
           permanencia. La cancelación surte efecto al final del periodo ya pagado; no se realizan devoluciones
-          proporcionales por el tiempo no consumido salvo que la ley aplicable disponga otra cosa.
+          proporcionales por el tiempo no consumido salvo que la ley aplicable disponga otra cosa. Un cambio de plan
+          no se aplica de forma inmediata: el Cliente mantiene su plan y precio actuales hasta el final del periodo
+          ya pagado, momento en el que se aplica el nuevo plan y se cobra su cuota correspondiente.
         </p>
       </section>
 

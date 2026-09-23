@@ -26,6 +26,7 @@ const CompanySetupPage = lazy(() => import('@/pages/CompanySetupPage').then((m) 
 const CorrectDecaPage = lazy(() => import('@/pages/CorrectDecaPage').then((m) => ({ default: m.CorrectDecaPage })))
 const GuardadosPage = lazy(() => import('@/pages/GuardadosPage').then((m) => ({ default: m.GuardadosPage })))
 const HistoryPage = lazy(() => import('@/pages/HistoryPage').then((m) => ({ default: m.HistoryPage })))
+const LegalNoticePage = lazy(() => import('@/pages/LegalNoticePage').then((m) => ({ default: m.LegalNoticePage })))
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const NewDecaPage = lazy(() => import('@/pages/NewDecaPage').then((m) => ({ default: m.NewDecaPage })))
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="/registro" element={<SignupPage />} />
             <Route path="/terminos" element={<TermsPage />} />
             <Route path="/privacidad" element={<PrivacyPage />} />
+            <Route path="/aviso-legal" element={<LegalNoticePage />} />
             <Route element={<VerifyEmailGate />}>
               <Route path="/configurar-empresa" element={<CompanySetupPage />} />
             </Route>
