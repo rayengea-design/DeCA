@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type Stripe from 'stripe'
 import { ensureStripeCustomer, FiscalSyncError } from '../_lib/customerFiscalSync.js'
+import { resolveActiveSubscription } from '../_lib/resolveActiveSubscription.js'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe.js'
 
@@ -42,7 +44,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       domicilio: company.domicilio as string,
     })
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    let subscription: Stripe.Subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    subscription = await resolveActiveSubscription(
+      stripe,
+      subscription,
+      company.stripeCustomerId as string | undefined,
+      companyRef,
+    )
     const currentItem = subscription.items.data[0]
     const currentPriceId = currentItem?.price.id
     if (!currentItem || !currentPriceId) return res.status(500).json({ error: 'No se encontró el detalle de la suscripción' })
@@ -80,14 +88,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Ya tienes programado ese cambio de plan' })
     }
 
-    if (!scheduleId) await stripe.subscriptionSchedules.create({ from_subscription: subscriptionId })
+    if (!scheduleId) await stripe.subscriptionSchedules.create({ from_subscription: subscription.id })
     // Re-retrieve rather than trust the schedule object from `create`/an
     // earlier `retrieve`: what matters is deriving the phase to preserve
     // from the *subscription's own current item*, not `schedule.phases[0]`,
     // which stays the ORIGINAL first phase forever even after later phases
     // have already become active — using stale dates from a phase that's
     // already in the past would confuse the schedule update below.
-    const scheduleIdToUpdate = scheduleId ?? ((await stripe.subscriptions.retrieve(subscriptionId)).schedule as string)
+    const scheduleIdToUpdate = scheduleId ?? ((await stripe.subscriptions.retrieve(subscription.id)).schedule as string)
 
     await stripe.subscriptionSchedules.update(scheduleIdToUpdate, {
       end_behavior: 'release',

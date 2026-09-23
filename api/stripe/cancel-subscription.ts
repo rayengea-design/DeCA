@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type Stripe from 'stripe'
+import { resolveActiveSubscription } from '../_lib/resolveActiveSubscription.js'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe } from '../_lib/stripe.js'
 
@@ -39,7 +41,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!subscriptionId) return res.status(400).json({ error: 'Esta empresa no tiene una suscripción activa' })
 
     const stripe = await getStripe()
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    let subscription: Stripe.Subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    subscription = await resolveActiveSubscription(
+      stripe,
+      subscription,
+      company.stripeCustomerId as string | undefined,
+      companyRef,
+    )
     const scheduleId = subscription.schedule as string | null
 
     let scheduleCleared = false
@@ -66,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await stripe.subscriptionSchedules.update(scheduleId, { end_behavior: 'release' })
       }
     } else {
-      await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: cancel })
+      await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: cancel })
     }
 
     await companyRef.update({ cancelAtPeriodEnd: cancel, ...(scheduleCleared ? { pendingPlan: null } : {}) })
