@@ -73,7 +73,7 @@ interface PricingPlan {
 const plans: PricingPlan[] = [
   {
     name: 'Básico',
-    price: '19€',
+    price: '5€',
     period: '/mes',
     description: 'Para autónomos y flotas pequeñas que empiezan con el DeCA.',
     features: ['Hasta 3 conductores', 'DeCA ilimitados', 'Historial y exportación CSV', 'Envío por WhatsApp'],
@@ -82,7 +82,7 @@ const plans: PricingPlan[] = [
   },
   {
     name: 'Flota',
-    price: '49€',
+    price: '25€',
     period: '/mes',
     description: 'Para empresas de transporte con varios conductores en ruta.',
     features: [
@@ -97,7 +97,7 @@ const plans: PricingPlan[] = [
   },
   {
     name: 'Empresa',
-    price: '99€',
+    price: '75€',
     period: '/mes',
     description: 'Para grupos de transporte con varios equipos y muchos conductores.',
     features: ['Hasta 50 conductores', 'Todo lo del plan Flota', 'Soporte prioritario'],
