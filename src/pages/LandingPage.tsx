@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 
 const DECA_MANDATORY_DATE = new Date('2026-10-05T00:00:00')
 const isMandatoryYet = Date.now() >= DECA_MANDATORY_DATE.getTime()
+const daysUntilMandatory = Math.max(0, Math.ceil((DECA_MANDATORY_DATE.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
 
 const features = [
   {
@@ -259,26 +260,71 @@ export function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-ink-900">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(192,9,14,0.35),_transparent_55%)]" />
-        <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-20 sm:px-6 sm:py-28">
-          <span className="inline-flex items-center gap-2 rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-300">
-            {isMandatoryYet ? 'Ya es obligatorio' : 'Obligatorio'} desde el 5 de octubre de 2026
-          </span>
-          <h1 className="max-w-2xl font-heading text-4xl font-extrabold leading-tight text-white sm:text-5xl">
-            Genera el DeCA de cada porte en menos de un minuto
-          </h1>
-          <p className="max-w-xl text-lg text-ink-200">
-            El Documento electrónico de Control Administrativo, sin rellenar formularios largos en la web del
-            Ministerio. PDF oficial con QR, cumplimiento verificado y todo el equipo desde el móvil.
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button asChild size="lg">
-              <Link to="/registro">Empieza gratis</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
-              <a href="#precios">Ver precios</a>
-            </Button>
+        <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="flex flex-col items-start gap-6">
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-300">
+              {isMandatoryYet
+                ? 'Ya es obligatorio desde el 5 de octubre de 2026'
+                : daysUntilMandatory <= 30
+                  ? `Obligatorio en ${daysUntilMandatory} ${daysUntilMandatory === 1 ? 'día' : 'días'} (5 de octubre de 2026)`
+                  : 'Obligatorio desde el 5 de octubre de 2026'}
+            </span>
+            <h1 className="max-w-2xl font-heading text-4xl font-extrabold leading-tight text-white sm:text-5xl">
+              Genera el DeCA de cada porte en menos de un minuto
+            </h1>
+            <p className="max-w-xl text-lg text-ink-200">
+              El Documento electrónico de Control Administrativo, sin rellenar formularios largos en la web del
+              Ministerio. PDF oficial con QR, cumplimiento verificado y todo el equipo desde el móvil.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild size="lg">
+                <Link to="/registro">Empieza gratis</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
+                <a href="#precios">Ver precios</a>
+              </Button>
+            </div>
+            <p className="text-sm text-ink-400">10 DeCA o 5 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
           </div>
-          <p className="text-sm text-ink-400">10 DeCA o 5 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
+
+          {/* Product mockup — an illustrated preview of the actual PDF a DeCA
+              generates, not a stock photo, so nothing here overstates or
+              misrepresents what the product does. */}
+          <div className="relative hidden lg:block">
+            <div className="absolute -inset-6 rounded-[2rem] bg-brand-500/10 blur-2xl" />
+            <div className="relative mx-auto w-72 -rotate-2 rounded-2xl border border-white/10 bg-white p-5 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-ink-100 pb-3">
+                <div>
+                  <p className="font-heading text-sm font-extrabold text-ink-900">DeCA</p>
+                  <p className="text-[10px] text-ink-400">Documento electrónico de Control Administrativo</p>
+                </div>
+                <ShieldCheck className="h-5 w-5 shrink-0 text-brand-500" />
+              </div>
+              <div className="mt-3 flex flex-col gap-2">
+                {['Cargador', 'Transportista', 'Mercancía', 'Origen — Destino', 'Matrículas'].map((label) => (
+                  <div key={label} className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-ink-400">{label}</span>
+                    <span className="h-1.5 w-14 rounded-full bg-ink-100" />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center gap-3 border-t border-ink-100 pt-3">
+                <div className="grid h-14 w-14 shrink-0 grid-cols-4 grid-rows-4 gap-0.5 rounded bg-ink-900 p-1.5">
+                  {[1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1].map((on, i) => (
+                    <span key={i} className={cn('rounded-[1px]', on ? 'bg-white' : 'bg-transparent')} />
+                  ))}
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-ink-900">QR de verificación</p>
+                  <p className="text-[10px] text-ink-400">Listo para inspección</p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -bottom-4 -left-4 flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-ink-900 shadow-lg">
+              <CheckCircle2 className="h-3.5 w-3.5 text-brand-500" />
+              PDF listo al instante
+            </div>
+          </div>
         </div>
       </section>
 
@@ -532,6 +578,20 @@ export function LandingPage() {
           <p className="max-w-lg text-ink-500">
             Prueba DeCA gratis con tus propios portes: 10 documentos o 5 días, sin tarjeta de crédito.
           </p>
+          <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-500">
+            <li className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-brand-500" />
+              Alta en menos de 2 minutos
+            </li>
+            <li className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-brand-500" />
+              Sin tarjeta de crédito
+            </li>
+            <li className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-brand-500" />
+              Sin permanencia, cancela cuando quieras
+            </li>
+          </ul>
           <Button asChild size="lg">
             <Link to="/registro">Empieza gratis</Link>
           </Button>
@@ -549,8 +609,14 @@ export function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="bg-ink-900">
-        <div className="mx-auto flex max-w-4xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-6">
+      <section className="relative overflow-hidden bg-ink-900">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(192,9,14,0.3),_transparent_55%)]" />
+        <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-6">
+          {!isMandatoryYet && daysUntilMandatory <= 30 && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-300">
+              Quedan {daysUntilMandatory} {daysUntilMandatory === 1 ? 'día' : 'días'} para que sea obligatorio
+            </span>
+          )}
           <h2 className="font-heading text-3xl font-bold text-white">Empieza a generar tus DeCA hoy</h2>
           <p className="max-w-xl text-ink-300">
             Da de alta tu empresa en menos de dos minutos y ten tu primer DeCA listo antes de terminar el café.
@@ -558,6 +624,7 @@ export function LandingPage() {
           <Button asChild size="lg">
             <Link to="/registro">Empieza gratis</Link>
           </Button>
+          <p className="text-xs text-ink-400">10 DeCA o 5 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
         </div>
       </section>
 
