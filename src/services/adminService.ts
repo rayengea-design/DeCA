@@ -43,7 +43,3 @@ export async function listAllCompanies(user: User): Promise<AdminCompanyRow[]> {
 export async function grantPlan(user: User, companyId: string, plan: PlanId | null): Promise<void> {
   await callAdminApi('/api/admin/grant-plan', user, { method: 'POST', body: JSON.stringify({ companyId, plan }) })
 }
-
-export async function deleteCompany(user: User, companyId: string): Promise<void> {
-  await callAdminApi('/api/admin/delete-company', user, { method: 'POST', body: JSON.stringify({ companyId }) })
-}

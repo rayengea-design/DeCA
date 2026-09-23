@@ -59,6 +59,13 @@ export interface Company {
    * acceso hasta que el periodo ya pagado termina). */
   currentPeriodEnd?: string
   cancelAtPeriodEnd?: boolean
+  /** Plan al que se pasará en `currentPeriodEnd` — se rellena al cambiar de
+   * plan estando ya suscrito (api/stripe/change-plan.ts programa el cambio
+   * en Stripe vía una Subscription Schedule en vez de aplicarlo al momento,
+   * para no cobrar/perder acceso a mitad de un periodo ya pagado). Se borra
+   * solo cuando el cambio realmente se aplica (webhook) o se deshace
+   * volviendo a elegir el plan actual. */
+  pendingPlan?: PlanId | null
   /** true cuando el plan se lo ha regalado el administrador de la
    * plataforma desde el panel de administración, sin pasar por Stripe
    * (`stripeSubscriptionId` queda vacío en ese caso). */

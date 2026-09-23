@@ -1,21 +1,14 @@
-import { AlertCircle, ExternalLink, Gift, Loader2, ShieldOff, Trash2 } from 'lucide-react'
+import { AlertCircle, ExternalLink, Gift, Loader2, ShieldOff } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/Button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { useAuth } from '@/context/AuthContext'
 import { daysUntilPeriodEnd, PLAN_NAMES } from '@/lib/plans'
 import { formatDate } from '@/lib/utils'
-import {
-  AdminApiError,
-  type AdminCompanyRow,
-  deleteCompany,
-  grantPlan,
-  listAllCompanies,
-} from '@/services/adminService'
+import { AdminApiError, type AdminCompanyRow, grantPlan, listAllCompanies } from '@/services/adminService'
 import type { PlanId } from '@/types/deca'
 
 const GRANTABLE_PLANS: PlanId[] = ['basico', 'flota', 'empresa', 'flota_plus']
@@ -63,9 +56,6 @@ export function AdminPanelPage() {
   const [planFilter, setPlanFilter] = useState<PlanFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
-  const [deleteTarget, setDeleteTarget] = useState<AdminCompanyRow | null>(null)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
-  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -143,22 +133,6 @@ export function AdminPanelPage() {
       return true
     })
   }, [companies, planFilter, statusFilter, search])
-
-  async function handleDeleteConfirm() {
-    if (!user || !deleteTarget || deleteConfirmText !== deleteTarget.nombre) return
-    setDeleting(true)
-    setError(null)
-    try {
-      await deleteCompany(user, deleteTarget.id)
-      setCompanies((prev) => prev?.filter((c) => c.id !== deleteTarget.id) ?? null)
-      setDeleteTarget(null)
-      setDeleteConfirmText('')
-    } catch {
-      setError('No se pudo eliminar la empresa. Inténtalo de nuevo.')
-    } finally {
-      setDeleting(false)
-    }
-  }
 
   if (forbidden) {
     return (
@@ -274,7 +248,6 @@ export function AdminPanelPage() {
                     <th className="px-4 py-3">DeCA</th>
                     <th className="px-4 py-3">Equipo</th>
                     <th className="px-4 py-3">Regalar plan</th>
-                    <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
@@ -368,19 +341,6 @@ export function AdminPanelPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            setDeleteTarget(c)
-                            setDeleteConfirmText('')
-                          }}
-                          title="Eliminar esta empresa por completo"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -389,39 +349,6 @@ export function AdminPanelPage() {
           </>
         )}
       </main>
-
-      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar {deleteTarget?.nombre}</DialogTitle>
-            <DialogDescription>
-              Esto borra para siempre su acceso (todas las cuentas de su equipo), todos sus DeCA y PDFs, y cancela su
-              suscripción de Stripe si tiene una activa. No se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <p className="mb-1.5 text-sm text-ink-500">
-            Escribe <span className="font-semibold text-ink-900">{deleteTarget?.nombre}</span> para confirmar:
-          </p>
-          <Input
-            value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
-            autoFocus
-          />
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleting || deleteConfirmText !== deleteTarget?.nombre}
-              onClick={handleDeleteConfirm}
-            >
-              {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              Eliminar definitivamente
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

@@ -53,13 +53,20 @@ async function syncSubscription(subscription: Stripe.Subscription) {
 
   const priceId = subscription.items.data[0]?.price.id
   const item = subscription.items.data[0]
+  const resolvedPlan = planFromPriceId(priceId) ?? null
 
   await companyRef.update({
     stripeSubscriptionId: subscription.id,
     subscriptionStatus: subscription.status,
-    plan: planFromPriceId(priceId) ?? null,
+    plan: resolvedPlan,
     currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    // A scheduled plan change (api/stripe/change-plan.ts) only actually
+    // takes effect later, at the Subscription Schedule's phase boundary —
+    // that's when Stripe swaps the price and this event fires with it
+    // already resolved to the plan that was pending, so this is where
+    // `pendingPlan` gets cleared, not at the moment the schedule was set up.
+    ...(companySnap.data()?.pendingPlan === resolvedPlan ? { pendingPlan: null } : {}),
   })
 }
 

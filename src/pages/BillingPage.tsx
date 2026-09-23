@@ -38,9 +38,7 @@ export function BillingPage() {
   const [infoError, setInfoError] = useState<string | null>(null)
   const [redirecting, setRedirecting] = useState<SelfServePlanId | 'portal' | null>(null)
   const [billingError, setBillingError] = useState<string | null>(null)
-  const [planChanged, setPlanChanged] = useState<{ plan: SelfServePlanId; charged: number | null; currency: string | null } | null>(
-    null,
-  )
+  const [planChanged, setPlanChanged] = useState<{ plan: SelfServePlanId; scheduled: boolean } | null>(null)
   const [checkout, setCheckout] = useState<{ plan: SelfServePlanId; clientSecret: string } | null>(null)
   const [paymentSucceeded, setPaymentSucceeded] = useState(false)
   const [cancelPending, setCancelPending] = useState(false)
@@ -87,19 +85,18 @@ export function BillingPage() {
 
   async function handleChangePlan(plan: SelfServePlanId) {
     const target = PLANS.find((p) => p.id === plan)
-    if (
-      !window.confirm(
-        `¿Cambiar a ${PLAN_NAMES[plan]} (${target?.price ?? ''})? Se te cobrará ahora mismo la diferencia prorrateada de lo que queda de este periodo con tu método de pago guardado.`,
-      )
-    ) {
-      return
-    }
+    const isUndoingPending = plan === company?.plan && Boolean(company?.pendingPlan)
+    const confirmMessage = isUndoingPending
+      ? `¿Cancelar el cambio a ${PLAN_NAMES[company!.pendingPlan!]} y quedarte en ${PLAN_NAMES[plan]}?`
+      : `¿Cambiar a ${PLAN_NAMES[plan]} (${target?.price ?? ''})? Seguirás en tu plan actual hasta el final de este periodo ya pagado — a partir de ahí se te cobrará la nueva cuota y pasarás al plan nuevo.`
+    if (!window.confirm(confirmMessage)) return
+
     setBillingError(null)
     setPlanChanged(null)
     setRedirecting(plan)
     try {
-      const { charged, currency } = await changePlan(user!, plan)
-      setPlanChanged({ plan, charged, currency })
+      const { scheduled } = await changePlan(user!, plan)
+      setPlanChanged({ plan, scheduled })
     } catch (err) {
       setBillingError(err instanceof Error ? err.message : 'No se pudo cambiar de plan.')
     } finally {
@@ -312,6 +309,14 @@ export function BillingPage() {
               Has cancelado tu suscripción — sigues teniendo acceso hasta esa fecha, luego pasa a prueba caducada.
             </div>
           )}
+          {subscribed && !company.comped && company.pendingPlan && (
+            <div className="flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+              <Clock className="h-4 w-4 shrink-0" />
+              Pasarás al plan {PLAN_NAMES[company.pendingPlan]}
+              {company.currentPeriodEnd ? ` el ${formatDate(company.currentPeriodEnd)}` : ''} — hasta entonces sigues en
+              tu plan actual.
+            </div>
+          )}
 
           {subscribed && !company.comped && (
             <div className="flex flex-wrap items-center gap-2">
@@ -403,10 +408,9 @@ export function BillingPage() {
           {planChanged && (
             <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Plan cambiado a {PLAN_NAMES[planChanged.plan]}.{' '}
-              {planChanged.charged
-                ? `Se te han cobrado ${(planChanged.charged / 100).toFixed(2)}${planChanged.currency === 'eur' ? '€' : ' ' + planChanged.currency} (diferencia prorrateada de este periodo).`
-                : 'No se te ha cobrado nada ahora — el nuevo importe se aplicará en tu próxima renovación.'}
+              {planChanged.scheduled
+                ? `Cambio a ${PLAN_NAMES[planChanged.plan]} programado para el final de tu periodo actual. Hasta entonces sigues en tu plan de ahora.`
+                : `Cambio cancelado — te quedas en ${PLAN_NAMES[planChanged.plan]}.`}
             </div>
           )}
           {checkout ? (
@@ -421,10 +425,15 @@ export function BillingPage() {
               <div className="grid gap-4 sm:grid-cols-3">
                 {PLANS.map((plan) => {
                   const isCurrent = subscribed && company.plan === plan.id
+                  const isPending = subscribed && company.pendingPlan === plan.id
+                  // Re-picking the plan you're already on is only meaningful
+                  // (and only enabled) while a *different* plan is pending —
+                  // it's how you undo that scheduled change.
+                  const canUndo = isCurrent && Boolean(company.pendingPlan)
                   return (
                     <div
                       key={plan.id}
-                      className={`flex flex-col rounded-lg border p-4 ${isCurrent ? 'border-brand-500 ring-1 ring-brand-500' : 'border-ink-100'}`}
+                      className={`flex flex-col rounded-lg border p-4 ${isCurrent || isPending ? 'border-brand-500 ring-1 ring-brand-500' : 'border-ink-100'}`}
                     >
                       <p className="font-heading text-lg font-bold text-ink-900">{plan.name}</p>
                       <p className="mt-0.5 text-sm text-ink-400">{plan.price}</p>
@@ -437,13 +446,21 @@ export function BillingPage() {
                       </ul>
                       <Button
                         onClick={() => (subscribed ? handleChangePlan(plan.id) : handleChoosePlan(plan.id))}
-                        disabled={isCurrent || redirecting !== null || !hasFiscalInfo}
+                        disabled={isPending || (isCurrent && !canUndo) || redirecting !== null || !hasFiscalInfo}
                         className="mt-4"
-                        variant={isCurrent ? 'outline' : plan.id === 'flota' ? 'default' : 'outline'}
+                        variant={isCurrent || isPending ? 'outline' : plan.id === 'flota' ? 'default' : 'outline'}
                         title={!hasFiscalInfo ? 'Completa antes tus datos de facturación' : undefined}
                       >
                         {redirecting === plan.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {isCurrent ? 'Plan actual' : subscribed ? `Cambiar a ${plan.name}` : `Elegir ${plan.name}`}
+                        {isPending
+                          ? 'Programado'
+                          : canUndo
+                            ? 'Mantener este plan'
+                            : isCurrent
+                              ? 'Plan actual'
+                              : subscribed
+                                ? `Cambiar a ${plan.name}`
+                                : `Elegir ${plan.name}`}
                       </Button>
                     </div>
                   )

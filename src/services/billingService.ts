@@ -26,14 +26,12 @@ export async function openBillingPortal(user: User): Promise<string> {
   return url as string
 }
 
-export interface ChangePlanResult {
-  charged: number | null
-  currency: string | null
-}
-
-export async function changePlan(user: User, plan: SelfServePlanId): Promise<ChangePlanResult> {
+/** `scheduled: true` means the change was scheduled for the end of the
+ * current period (the normal case); `false` means it instead undid a
+ * previously-scheduled change by re-picking the plan already active. */
+export async function changePlan(user: User, plan: SelfServePlanId): Promise<{ scheduled: boolean }> {
   const data = await callBillingApi('/api/stripe/change-plan', user, { plan })
-  return { charged: (data.charged as number | null) ?? null, currency: (data.currency as string | null) ?? null }
+  return { scheduled: Boolean(data.scheduled) }
 }
 
 /** `cancel: true` cancels at the end of the current billing period (access

@@ -1,21 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import type Stripe from 'stripe'
 import { ensureStripeCustomer, FiscalSyncError } from '../_lib/customerFiscalSync.js'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe.js'
 
 /** Switches an already-subscribed company to a different self-serve plan
- * (up or down) on their existing Stripe subscription, instead of sending
- * them through Checkout again. `proration_behavior: 'always_invoice'` bills
- * and attempts to charge the prorated difference immediately (using the
- * saved default payment method) instead of silently rolling it into next
- * month's invoice with no visible charge or confirmation — that silent
- * behavior read as "the plan change did nothing" to a customer expecting to
- * pay more (or see a credit) right away. `plan`/`subscriptionStatus`/
- * `currentPeriodEnd`/`cancelAtPeriodEnd` are written to Firestore here too,
- * not left solely to the `customer.subscription.updated` webhook (which has
- * shown intermittent delivery failures in production) — same fast-path
- * pattern as cancel-subscription.ts. */
+ * (up or down) — but not immediately: the current plan stays active and
+ * paid-for until the end of the period already billed, and only then does
+ * Stripe switch the price and charge the new amount. This uses a Stripe
+ * Subscription Schedule with two phases (mirror of the current phase, then
+ * the new price starting where it ends) rather than
+ * `stripe.subscriptions.update()`'s immediate item swap, which is what an
+ * ordinary plan change on Stripe would otherwise do. `pendingPlan` is
+ * written to Firestore right away so the UI can show what's coming and
+ * when — the price itself only actually changes later, at the phase
+ * boundary, which fires the normal `customer.subscription.updated` webhook
+ * (api/stripe/webhook.ts already clears `pendingPlan` once the synced plan
+ * matches it). */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -43,34 +43,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    const itemId = subscription.items.data[0]?.id
-    if (!itemId) return res.status(500).json({ error: 'No se encontró el detalle de la suscripción' })
-    if (subscription.items.data[0]?.price.id === PRICE_IDS[plan]) {
-      return res.status(400).json({ error: 'Ya tienes contratado ese plan' })
+    const currentPriceId = subscription.items.data[0]?.price.id
+    if (!currentPriceId) return res.status(500).json({ error: 'No se encontró el detalle de la suscripción' })
+
+    const pendingPlan = company.pendingPlan as PlanId | null | undefined
+
+    if (PRICE_IDS[plan] === currentPriceId) {
+      if (!pendingPlan) return res.status(400).json({ error: 'Ya tienes contratado ese plan' })
+      // Re-picking the currently-active plan while a different one is
+      // scheduled reads as "changed my mind, undo the pending change" —
+      // releasing hands the subscription back from schedule-managed to a
+      // plain, normally-renewing one.
+      const scheduleId = subscription.schedule as string | null
+      if (scheduleId) await stripe.subscriptionSchedules.release(scheduleId)
+      await companyRef.update({ pendingPlan: null })
+      return res.status(200).json({ ok: true, scheduled: false })
+    }
+    if (pendingPlan === plan) {
+      return res.status(400).json({ error: 'Ya tienes programado ese cambio de plan' })
     }
 
-    const updated = await stripe.subscriptions.update(subscriptionId, {
-      items: [{ id: itemId, price: PRICE_IDS[plan] }],
-      proration_behavior: 'always_invoice',
-      metadata: { ...subscription.metadata, plan },
-      expand: ['latest_invoice'],
+    const scheduleId = subscription.schedule as string | null
+    const schedule = scheduleId
+      ? await stripe.subscriptionSchedules.retrieve(scheduleId)
+      : await stripe.subscriptionSchedules.create({ from_subscription: subscriptionId })
+    const currentPhase = schedule.phases[0]
+
+    await stripe.subscriptionSchedules.update(schedule.id, {
+      end_behavior: 'release',
+      phases: [
+        {
+          items: currentPhase.items.map((i) => ({ price: i.price as string, quantity: i.quantity })),
+          start_date: currentPhase.start_date,
+          end_date: currentPhase.end_date,
+          proration_behavior: 'none',
+        },
+        {
+          items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+          proration_behavior: 'none',
+          metadata: { ...subscription.metadata, plan },
+        },
+      ],
     })
 
-    const item = updated.items.data[0]
-    await companyRef.update({
-      plan,
-      subscriptionStatus: updated.status,
-      currentPeriodEnd: item ? new Date(item.current_period_end * 1000).toISOString() : null,
-      cancelAtPeriodEnd: updated.cancel_at_period_end,
-    })
+    await companyRef.update({ pendingPlan: plan })
 
-    const invoice = updated.latest_invoice as Stripe.Invoice | null
-    return res.status(200).json({
-      ok: true,
-      charged: invoice?.amount_paid ?? null,
-      currency: invoice?.currency ?? null,
-      invoiceStatus: invoice?.status ?? null,
-    })
+    return res.status(200).json({ ok: true, scheduled: true })
   } catch (err) {
     if (err instanceof ApiError) return res.status(err.status).json({ error: err.message })
     if (err instanceof FiscalSyncError) return res.status(400).json({ error: err.message })
