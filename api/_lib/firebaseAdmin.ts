@@ -49,3 +49,13 @@ export async function getAdminDb() {
   const { getFirestore } = await import('firebase-admin/firestore')
   return getFirestore(await getAdminApp())
 }
+
+// Fixed to this project's one Storage bucket — `getStorage(app).bucket()`
+// with no args would instead guess `{project_id}.appspot.com`, which isn't
+// this bucket's actual name (see VITE_FIREBASE_STORAGE_BUCKET in .env).
+const STORAGE_BUCKET = 'deca-8da69.firebasestorage.app'
+
+export async function getAdminStorage() {
+  const { getStorage } = await import('firebase-admin/storage')
+  return getStorage(await getAdminApp()).bucket(STORAGE_BUCKET)
+}
