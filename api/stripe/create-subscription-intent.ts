@@ -51,14 +51,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       expand: ['latest_invoice'],
     })
 
-    // This SDK targets a Stripe API version where an invoice's client secret
-    // lives at `confirmation_secret.client_secret`, not the older singular
-    // `latest_invoice.payment_intent.client_secret` — the new shape exists
-    // because one invoice can now have multiple payment attempts/methods.
-    // `type` is documented as always "payment_intent" today, so this is
-    // still exactly what stripe.confirmPayment() on the client expects.
+    // This Stripe API version no longer puts the PaymentIntent on the
+    // invoice itself (`latest_invoice.payment_intent`/`confirmation_secret`
+    // don't exist here) — it now lives on the invoice's default
+    // InvoicePayment, a separate resource. `stripe.invoicePayments.list`
+    // can't be combined into the subscription-creation call (expand caps
+    // out at 4 levels, one short of reaching `payment_intent` from
+    // `latest_invoice`), so this is a second request.
     const invoice = subscription.latest_invoice as Stripe.Invoice | null
-    const clientSecret = invoice?.confirmation_secret?.client_secret
+    let clientSecret: string | null | undefined
+    if (invoice) {
+      const invoicePayments = await stripe.invoicePayments.list({
+        invoice: invoice.id,
+        expand: ['data.payment.payment_intent'],
+      })
+      const defaultPayment = invoicePayments.data.find((p) => p.is_default)
+      const paymentIntent =
+        defaultPayment?.payment.type === 'payment_intent' ? defaultPayment.payment.payment_intent : undefined
+      clientSecret = typeof paymentIntent === 'object' ? paymentIntent?.client_secret : undefined
+    }
     if (!clientSecret) {
       console.error('create-subscription-intent: sin client_secret', subscription.id)
       return res.status(500).json({ error: 'No se pudo preparar el pago. Inténtalo de nuevo.' })
