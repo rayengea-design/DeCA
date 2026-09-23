@@ -40,7 +40,12 @@ export function AppLayout() {
             </button>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-5xl gap-1 px-4 pb-2 sm:px-6">
+        {/* overflow-x-auto + shrink-0 on each item: 5 nav items (admin) never
+            fit a phone width — without this the row refused to shrink and
+            forced the entire page wider than the viewport instead of just
+            this bar scrolling horizontally, the classic "everything is
+            zoomed out and overlapping" mobile symptom. */}
+        <nav className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-2 sm:px-6">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -48,7 +53,7 @@ export function AppLayout() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                  'inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-brand-50 text-brand-600'
                     : 'text-ink-500 hover:bg-ink-100 hover:text-ink-900',

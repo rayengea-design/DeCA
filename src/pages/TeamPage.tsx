@@ -238,18 +238,18 @@ export function TeamPage() {
               {members.map((m) => (
                 <div
                   key={m.uid}
-                  className="flex items-center justify-between rounded-md border border-ink-100 px-3 py-2 text-sm"
+                  className="flex flex-col gap-2 rounded-md border border-ink-100 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-ink-900">
                       {m.nombre || m.email}
                       {m.uid === user?.uid && <span className="ml-2 text-xs text-ink-400">(tú)</span>}
                     </p>
-                    <p className="text-xs text-ink-400">
+                    <p className="truncate text-xs text-ink-400">
                       {m.email} · {m.role === 'admin' ? 'Administrador' : 'Conductor'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
