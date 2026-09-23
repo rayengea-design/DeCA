@@ -2,24 +2,28 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe } from '../_lib/stripe.js'
 
-/** Toggles cancel-at-period-end directly on the subscription — the
- * Netflix/Spotify pattern: cancel now, keep access through what's already
- * paid for, and undo it any time before the period actually ends, all
- * without leaving the app. `cancelAtPeriodEnd` is also written to Firestore
- * right here (not just left to the `customer.subscription.updated` webhook,
- * like every other subscription field): that webhook has shown intermittent
- * delivery failures in production, and this one field is a plain boolean we
- * already know for certain from the Stripe call above — no need to wait on
- * a webhook that might not arrive. The webhook still fires and writes the
- * same value, so this is a fast-path, not a replacement.
+/** Toggles cancel-at-period-end — the Netflix/Spotify pattern: cancel now,
+ * keep access through what's already paid for, and undo it any time before
+ * the period actually ends, all without leaving the app. `cancelAtPeriodEnd`
+ * is also written to Firestore right here (not just left to the
+ * `customer.subscription.updated` webhook, like every other subscription
+ * field): that webhook has shown intermittent delivery failures in
+ * production, and this one field is a plain boolean we already know for
+ * certain from the Stripe call above.
  *
  * A subscription with a pending plan change (change-plan.ts) is managed by
  * a Subscription Schedule, and Stripe flatly rejects touching
- * `cancel_at_period_end` directly on one of those — it has to go through
- * the schedule instead. Canceling releases the schedule first (dropping any
- * pending plan change: if you're not renewing, switching plans at renewal
- * is moot), which hands the subscription back to plain management so the
- * rest of this logic works exactly as it did before schedules existed. */
+ * `cancel_at_period_end` directly on one of those — it has to go through the
+ * schedule instead. This used to call `subscriptionSchedules.release()` to
+ * hand it back to plain management first, but that turned out to cancel the
+ * subscription immediately instead of "leaving it in place" as Stripe's own
+ * docs for that method promise — in production, a customer who canceled was
+ * dropped straight to the trial instead of keeping paid access until the
+ * period they'd already paid for actually ended. Setting the schedule's
+ * `end_behavior` directly (`cancel` / `release`) sidesteps `release()`
+ * entirely and does exactly what the name says, verified live: the
+ * subscription keeps running as normal through the current (single, now
+ * unpending-plan-change) phase, then either cancels or keeps renewing. */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -35,18 +39,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!subscriptionId) return res.status(400).json({ error: 'Esta empresa no tiene una suscripción activa' })
 
     const stripe = await getStripe()
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    const scheduleId = subscription.schedule as string | null
 
     let scheduleCleared = false
-    if (cancel) {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-      const scheduleId = subscription.schedule as string | null
-      if (scheduleId) {
-        await stripe.subscriptionSchedules.release(scheduleId)
+    if (scheduleId) {
+      const item = subscription.items.data[0]
+      if (cancel && item) {
+        // Collapsing to a single phase (dropping any pending-plan-change
+        // phase) makes `end_behavior: 'cancel'` actually fire when this
+        // phase ends — with a second, open-ended phase still queued, it
+        // would never trigger at all.
+        await stripe.subscriptionSchedules.update(scheduleId, {
+          end_behavior: 'cancel',
+          phases: [
+            {
+              items: [{ price: item.price.id, quantity: item.quantity }],
+              start_date: item.current_period_start,
+              end_date: item.current_period_end,
+              proration_behavior: 'none',
+            },
+          ],
+        })
         scheduleCleared = true
+      } else {
+        await stripe.subscriptionSchedules.update(scheduleId, { end_behavior: 'release' })
       }
+    } else {
+      await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: cancel })
     }
 
-    await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: cancel })
     await companyRef.update({ cancelAtPeriodEnd: cancel, ...(scheduleCleared ? { pendingPlan: null } : {}) })
 
     return res.status(200).json({ ok: true })

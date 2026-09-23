@@ -43,19 +43,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    const currentPriceId = subscription.items.data[0]?.price.id
-    if (!currentPriceId) return res.status(500).json({ error: 'No se encontró el detalle de la suscripción' })
+    const currentItem = subscription.items.data[0]
+    const currentPriceId = currentItem?.price.id
+    if (!currentItem || !currentPriceId) return res.status(500).json({ error: 'No se encontró el detalle de la suscripción' })
 
     const pendingPlan = company.pendingPlan as PlanId | null | undefined
+    const scheduleId = subscription.schedule as string | null
 
     if (PRICE_IDS[plan] === currentPriceId) {
       if (!pendingPlan) return res.status(400).json({ error: 'Ya tienes contratado ese plan' })
       // Re-picking the currently-active plan while a different one is
-      // scheduled reads as "changed my mind, undo the pending change" —
-      // releasing hands the subscription back from schedule-managed to a
-      // plain, normally-renewing one.
-      const scheduleId = subscription.schedule as string | null
-      if (scheduleId) await stripe.subscriptionSchedules.release(scheduleId)
+      // scheduled reads as "changed my mind, undo the pending change" — drop
+      // back to a single phase mirroring what's actually running right now
+      // and let it release once that phase ends. Not
+      // `subscriptionSchedules.release()`: that method's own docs say it
+      // "leaves any existing subscription in place", but in production it
+      // canceled the subscription immediately instead — same issue fixed in
+      // cancel-subscription.ts.
+      if (scheduleId) {
+        await stripe.subscriptionSchedules.update(scheduleId, {
+          end_behavior: 'release',
+          phases: [
+            {
+              items: [{ price: currentPriceId, quantity: currentItem.quantity }],
+              start_date: currentItem.current_period_start,
+              end_date: currentItem.current_period_end,
+              proration_behavior: 'none',
+            },
+          ],
+        })
+      }
       await companyRef.update({ pendingPlan: null })
       return res.status(200).json({ ok: true, scheduled: false })
     }
@@ -63,19 +80,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Ya tienes programado ese cambio de plan' })
     }
 
-    const scheduleId = subscription.schedule as string | null
-    const schedule = scheduleId
-      ? await stripe.subscriptionSchedules.retrieve(scheduleId)
-      : await stripe.subscriptionSchedules.create({ from_subscription: subscriptionId })
-    const currentPhase = schedule.phases[0]
+    if (!scheduleId) await stripe.subscriptionSchedules.create({ from_subscription: subscriptionId })
+    // Re-retrieve rather than trust the schedule object from `create`/an
+    // earlier `retrieve`: what matters is deriving the phase to preserve
+    // from the *subscription's own current item*, not `schedule.phases[0]`,
+    // which stays the ORIGINAL first phase forever even after later phases
+    // have already become active — using stale dates from a phase that's
+    // already in the past would confuse the schedule update below.
+    const scheduleIdToUpdate = scheduleId ?? ((await stripe.subscriptions.retrieve(subscriptionId)).schedule as string)
 
-    await stripe.subscriptionSchedules.update(schedule.id, {
+    await stripe.subscriptionSchedules.update(scheduleIdToUpdate, {
       end_behavior: 'release',
       phases: [
         {
-          items: currentPhase.items.map((i) => ({ price: i.price as string, quantity: i.quantity })),
-          start_date: currentPhase.start_date,
-          end_date: currentPhase.end_date,
+          items: [{ price: currentPriceId, quantity: currentItem.quantity }],
+          start_date: currentItem.current_period_start,
+          end_date: currentItem.current_period_end,
           proration_behavior: 'none',
         },
         {
