@@ -35,7 +35,7 @@ export async function createDecaDocument(
   values: DecaFormValues,
   creator: Creator,
   correctionInfo?: CorrectionInfo,
-): Promise<DecaRecord> {
+): Promise<{ record: DecaRecord; pdfBytes: Uint8Array }> {
   const docId = crypto.randomUUID()
   const storagePath = `deca/${companyId}/${docId}.pdf`
   const publicUrl = getPublicUrl(storagePath)
@@ -81,7 +81,7 @@ export async function createDecaDocument(
   batch.update(doc(db, 'companies', companyId), { decaCount: increment(1) })
   await batch.commit()
 
-  return record
+  return { record, pdfBytes }
 }
 
 /** Implements the "generar un nuevo fichero electrónico" correction method
@@ -111,7 +111,7 @@ export async function correctDecaDocument(
         }
       : values
 
-  const newRecord = await createDecaDocument(companyId, valuesWithVehicleNote, updatedBy, {
+  const { record: newRecord } = await createDecaDocument(companyId, valuesWithVehicleNote, updatedBy, {
     originalDocId: original.id,
     reason,
   })

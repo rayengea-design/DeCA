@@ -29,11 +29,38 @@ export function buildWhatsAppShareUrl(publicUrl: string, label: string) {
  * this is what the Web Share API's `files` support is for, and it's
  * available on Android Chrome and iOS Safari. Desktop browsers generally
  * don't support sharing files this way, and there's no way to attach a
- * file to a wa.me URL, so there we fall back to the old link-only share. */
-export async function shareDecaPdf(pdfUrl: string, fileName: string, label: string) {
+ * file to a wa.me URL, so there we fall back to the old link-only share.
+ *
+ * `pdfBytes` lets the caller hand over the file it already has in memory
+ * (the freshly-generated DeCA) so we skip fetching it back from Firebase
+ * Storage — that fetch is cross-origin and fails whenever the bucket's CORS
+ * isn't set for this origin, which would otherwise silently drop us to the
+ * link-only fallback even on a phone that CAN attach the file. When bytes
+ * aren't available (e.g. sharing an old DeCA from the history), we still
+ * fetch from the URL. */
+export async function shareDecaPdf(
+  pdfUrl: string,
+  fileName: string,
+  label: string,
+  pdfBytes?: Uint8Array | Blob,
+) {
   if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function') {
     try {
-      const blob = await (await fetch(pdfUrl)).blob()
+      let blob: Blob
+      if (pdfBytes instanceof Blob) {
+        blob = pdfBytes
+      } else if (pdfBytes) {
+        // Copy into a standalone ArrayBuffer — TS's DOM lib rejects a bare
+        // Uint8Array<ArrayBufferLike> as a BlobPart, and this also drops any
+        // byte offset so the Blob gets exactly the PDF's bytes.
+        const buffer = pdfBytes.buffer.slice(
+          pdfBytes.byteOffset,
+          pdfBytes.byteOffset + pdfBytes.byteLength,
+        ) as ArrayBuffer
+        blob = new Blob([buffer], { type: 'application/pdf' })
+      } else {
+        blob = await (await fetch(pdfUrl)).blob()
+      }
       const file = new File([blob], fileName, { type: 'application/pdf' })
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: label, text: label })

@@ -26,6 +26,7 @@ export function NewDecaPage() {
   const { user, profile, company } = useAuth()
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<DecaRecord | null>(null)
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [copyOk, setCopyOk] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
@@ -91,7 +92,7 @@ export function NewDecaPage() {
         domicilio: values.counterpartDomicilio,
       }
 
-      const record = await createDecaDocument(
+      const { record, pdfBytes } = await createDecaDocument(
         company.id,
         {
           ownRole: values.ownRole,
@@ -112,6 +113,7 @@ export function NewDecaPage() {
         { uid: user.uid, email: user.email ?? '', nombre: profile?.nombre },
       )
       setResult(record)
+      setPdfBytes(pdfBytes)
       setQrDataUrl(await QRCode.toDataURL(record.publicUrl, { margin: 1, width: 300 }))
 
       const creator = { uid: user.uid, email: user.email ?? '', nombre: profile?.nombre }
@@ -159,6 +161,7 @@ export function NewDecaPage() {
         result.publicUrl,
         decaFileName(result.matriculaTractora, result.fechaTransporte),
         `DeCA ${result.matriculaTractora} · ${result.origen} → ${result.destino}`,
+        pdfBytes ?? undefined,
       )
     } finally {
       setSharing(false)
@@ -167,6 +170,7 @@ export function NewDecaPage() {
 
   function startNew() {
     setResult(null)
+    setPdfBytes(null)
     setCopyOk(false)
     setQrDataUrl(null)
     setSaveAsTrip(false)
