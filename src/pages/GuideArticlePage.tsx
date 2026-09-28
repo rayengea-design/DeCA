@@ -114,6 +114,17 @@ export function GuideArticlePage() {
             </section>
           ))}
 
+          {/* Mid-article CTA: catches the reader at peak intent, right after
+              the how/what content and before the FAQ. */}
+          <aside className="mt-10 flex flex-col items-start gap-3 rounded-xl border border-brand-200 bg-brand-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-ink-700">
+              ¿Necesitas generar tu DeCA? Pruébalo gratis: 10 documentos o 5 días, sin tarjeta.
+            </p>
+            <Button asChild className="shrink-0">
+              <Link to="/registro">Empieza gratis</Link>
+            </Button>
+          </aside>
+
           {guide.faqs && guide.faqs.length > 0 && (
             <section className="mt-10">
               <h2 className="font-heading text-2xl font-bold text-ink-900">Preguntas frecuentes</h2>
@@ -135,6 +146,9 @@ export function GuideArticlePage() {
           <Button asChild size="lg" className="mt-4">
             <Link to="/registro">Empieza gratis</Link>
           </Button>
+          <p className="mt-4 text-xs text-ink-500">
+            Conforme a la Orden FOM/2861/2012 · Datos de cada empresa aislados · Pagos y factura vía Stripe
+          </p>
         </aside>
       </main>
     </div>
