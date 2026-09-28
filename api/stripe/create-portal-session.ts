@@ -11,7 +11,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!customerId) return res.status(400).json({ error: 'Esta empresa todavía no tiene una suscripción' })
 
     const stripe = await getStripe()
-    const origin = `https://${req.headers.host}`
+    // Fixed canonical origin rather than `req.headers.host`: the Host header is
+    // client-controllable, and this value ends up as a redirect target, so it
+    // shouldn't be derived from untrusted input. Falls back to the request
+    // host only for Vercel preview deployments (non-production).
+    const origin =
+      process.env.VERCEL_ENV === 'production' || !req.headers.host
+        ? 'https://www.kreanex.es'
+        : `https://${req.headers.host}`
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/app/facturacion`,
