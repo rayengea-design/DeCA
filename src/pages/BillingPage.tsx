@@ -19,6 +19,7 @@ import {
   createSubscriptionIntent,
   openBillingPortal,
   setSubscriptionCancellation,
+  syncSubscription,
 } from '@/services/billingService'
 import { updateCompanyInfo } from '@/services/companyService'
 import type { SelfServePlanId } from '@/types/deca'
@@ -81,6 +82,12 @@ export function BillingPage() {
   function handlePaymentSuccess() {
     setCheckout(null)
     setPaymentSucceeded(true)
+    // Force Firestore to reflect the now-active subscription without waiting
+    // on Stripe's webhook — the AuthContext company listener then flips the
+    // UI to "activo" on its own. Best-effort: the webhook is still the
+    // backstop, so a failure here isn't surfaced as a payment error (the
+    // payment already succeeded).
+    if (user) syncSubscription(user).catch(() => {})
   }
 
   async function handleChangePlan(plan: SelfServePlanId) {

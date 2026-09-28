@@ -26,6 +26,14 @@ export async function openBillingPortal(user: User): Promise<string> {
   return url as string
 }
 
+/** Called right after the embedded payment succeeds: forces Firestore to
+ * reflect the now-active subscription immediately, without waiting on
+ * Stripe's webhook. Best-effort — the webhook is still the backstop — so
+ * callers should not block the success UI on it. */
+export async function syncSubscription(user: User): Promise<void> {
+  await callBillingApi('/api/stripe/sync-subscription', user)
+}
+
 /** `scheduled: true` means the change was scheduled for the end of the
  * current period (the normal case); `false` means it instead undid a
  * previously-scheduled change by re-picking the plan already active. */
