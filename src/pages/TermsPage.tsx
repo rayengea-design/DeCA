@@ -101,8 +101,8 @@ export function TermsPage() {
           Podemos actualizar estos Términos para reflejar cambios en el servicio o en la normativa aplicable;
           notificaremos cambios relevantes con antelación razonable. Para cualquier consulta sobre estos Términos,
           puedes escribirnos a{' '}
-          <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
-            info@gruponoveldisl.es
+          <a href="mailto:info@gruponoveldi.es" className="font-medium text-brand-600 hover:underline">
+            info@gruponoveldi.es
           </a>
           .
         </p>

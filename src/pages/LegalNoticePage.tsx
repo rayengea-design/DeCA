@@ -24,8 +24,8 @@ export function LegalNoticePage() {
           </li>
           <li>
             <strong>Correo electrónico de contacto:</strong>{' '}
-            <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
-              info@gruponoveldisl.es
+            <a href="mailto:info@gruponoveldi.es" className="font-medium text-brand-600 hover:underline">
+              info@gruponoveldi.es
             </a>
           </li>
         </ul>

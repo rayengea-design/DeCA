@@ -14,8 +14,8 @@ export function PrivacyPage() {
           El responsable del tratamiento de los datos personales recogidos a través de DeCA es{' '}
           <strong>Grupo Noveldi SL</strong>, CIF <strong>B04414645</strong>, con domicilio en Urbanización La Paloma
           58, Venta Melilla, 30850 Totana (Murcia), España. Contacto:{' '}
-          <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
-            info@gruponoveldisl.es
+          <a href="mailto:info@gruponoveldi.es" className="font-medium text-brand-600 hover:underline">
+            info@gruponoveldi.es
           </a>
           .
         </p>
@@ -112,8 +112,8 @@ export function PrivacyPage() {
         <p>
           Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación del tratamiento y
           portabilidad escribiendo a{' '}
-          <a href="mailto:info@gruponoveldisl.es" className="font-medium text-brand-600 hover:underline">
-            info@gruponoveldisl.es
+          <a href="mailto:info@gruponoveldi.es" className="font-medium text-brand-600 hover:underline">
+            info@gruponoveldi.es
           </a>
           , indicando el derecho que deseas ejercer y adjuntando copia de un documento que acredite tu identidad. Si
           consideras que no hemos atendido correctamente tu solicitud, tienes derecho a reclamar ante la Agencia
