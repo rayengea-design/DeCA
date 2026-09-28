@@ -88,27 +88,145 @@
             "inLanguage": "es-ES",
             "description": "Genera el Documento electrónico de Control Administrativo (DeCA) exigido por la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026 de la DGTCF para el transporte nacional de mercancías por carretera en España.",
             "provider": { "@id": "https://www.kreanex.es/#organization" },
-            "offers": [
+            "featureList": [
+              "Genera el DeCA en PDF con código QR de verificación en menos de un minuto",
+              "Cumplimiento de la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026 de la DGTCF",
+              "Acceso individual por conductor y panel de flota para el gestor",
+              "Corrección de documentos enlazada al DeCA original",
+              "Historial buscable y exportación a CSV",
+              "Envío del PDF por WhatsApp",
+              "Funciona en el móvil como app (PWA), incluso sin cobertura"
+            ],
+            "offers": {
+              "@type": "AggregateOffer",
+              "priceCurrency": "EUR",
+              "lowPrice": "5",
+              "highPrice": "75",
+              "offerCount": "4",
+              "url": "https://www.kreanex.es/#precios",
+              "offers": [
+                {
+                  "@type": "Offer",
+                  "name": "Plan Básico",
+                  "price": "5",
+                  "priceCurrency": "EUR",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://www.kreanex.es/#precios",
+                  "description": "Hasta 3 conductores, DeCA ilimitados, historial y exportación CSV, envío por WhatsApp. Precio mensual sin IVA."
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Plan Flota",
+                  "price": "25",
+                  "priceCurrency": "EUR",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://www.kreanex.es/#precios",
+                  "description": "Hasta 10 conductores, corrección de documentos y soporte prioritario. Precio mensual sin IVA."
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Plan Empresa",
+                  "price": "75",
+                  "priceCurrency": "EUR",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://www.kreanex.es/#precios",
+                  "description": "Hasta 50 conductores y soporte prioritario. Precio mensual sin IVA."
+                },
+                {
+                  "@type": "Offer",
+                  "name": "Plan Flota+",
+                  "priceCurrency": "EUR",
+                  "availability": "https://schema.org/InStock",
+                  "url": "https://www.kreanex.es/#precios",
+                  "description": "Conductores ilimitados, facturación a medida, alta asistida y SLA dedicado. Precio a medida."
+                }
+              ]
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://www.kreanex.es/#faq",
+            "inLanguage": "es-ES",
+            "mainEntity": [
               {
-                "@type": "Offer",
-                "name": "Plan Básico",
-                "price": "19",
-                "priceCurrency": "EUR",
-                "url": "https://www.kreanex.es/#precios"
+                "@type": "Question",
+                "name": "¿Qué es el DeCA y por qué es obligatorio?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "El Documento electrónico de Control Administrativo (DeCA) es el documento que deben llevar los transportes nacionales de mercancías por carretera en España, según la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026. Desde el 5 de octubre de 2026 es obligatorio en cada porte."
+                }
               },
               {
-                "@type": "Offer",
-                "name": "Plan Flota",
-                "price": "49",
-                "priceCurrency": "EUR",
-                "url": "https://www.kreanex.es/#precios"
+                "@type": "Question",
+                "name": "¿Qué pasa si no llevo el DeCA?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No llevarlo, o llevarlo mal cumplimentado, puede suponer una sanción de entre 401€ y 20.000€ según la infracción."
+                }
               },
               {
-                "@type": "Offer",
-                "name": "Plan Empresa",
-                "price": "99",
-                "priceCurrency": "EUR",
-                "url": "https://www.kreanex.es/#precios"
+                "@type": "Question",
+                "name": "¿Cada conductor necesita su propia cuenta?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Sí, y es lo recomendable: das de alta a cada conductor con su acceso, cada uno genera y ve solo sus propios DeCA, y tú ves los de toda la empresa."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿Puedo cancelar cuando quiera?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Sí. Gestionas tu suscripción, cambias de plan o cancelas desde tu propio panel, sin llamadas ni permanencia. Si cancelas, mantienes acceso hasta el final del periodo ya pagado."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿Necesito instalar algo?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. Funciona desde el navegador del móvil o el ordenador, y se puede añadir a la pantalla de inicio como una app (PWA) que sigue funcionando sin cobertura."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿Puedo cambiar de plan más adelante?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Sí, en cualquier momento desde Facturación. El cambio se aplica al final de tu periodo actual: sigues en tu plan de ahora hasta entonces y solo se te cobra la nueva cuota cuando toca renovar."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿Qué pasa con mis DeCA si dejo de pagar?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Todos los documentos ya generados se conservan y siguen siendo descargables — es una obligación legal de conservación de 1 año, no depende de tu suscripción. Lo que se detiene es poder generar DeCA nuevos."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿Cómo se calcula y se cobra el IVA?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "El precio de cada plan no incluye IVA — se calcula y se muestra desglosado en el momento del pago, y cada cobro genera automáticamente su factura, que recibes por email."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿Es seguro? ¿Quién ve mis datos?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Los datos de cada empresa están aislados a nivel de base de datos: nadie de otra empresa cliente puede acceder a ellos. Los pagos los procesa Stripe directamente — DeCA no almacena ni ve los datos de tu tarjeta."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "¿El QR del DeCA es el mismo que pide un inspector?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Sí. El PDF que genera DeCA incluye el código QR de verificación exigido por la normativa, con todos los campos obligatorios cumplimentados."
+                }
               }
             ]
           }

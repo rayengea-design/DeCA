@@ -25,6 +25,8 @@ const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ defa
 const CompanySetupPage = lazy(() => import('@/pages/CompanySetupPage').then((m) => ({ default: m.CompanySetupPage })))
 const CorrectDecaPage = lazy(() => import('@/pages/CorrectDecaPage').then((m) => ({ default: m.CorrectDecaPage })))
 const GuardadosPage = lazy(() => import('@/pages/GuardadosPage').then((m) => ({ default: m.GuardadosPage })))
+const GuidesIndexPage = lazy(() => import('@/pages/GuidesIndexPage').then((m) => ({ default: m.GuidesIndexPage })))
+const GuideArticlePage = lazy(() => import('@/pages/GuideArticlePage').then((m) => ({ default: m.GuideArticlePage })))
 const HistoryPage = lazy(() => import('@/pages/HistoryPage').then((m) => ({ default: m.HistoryPage })))
 const LegalNoticePage = lazy(() => import('@/pages/LegalNoticePage').then((m) => ({ default: m.LegalNoticePage })))
 const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
@@ -70,6 +72,10 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          {/* Public marketing/SEO routes — kept outside AuthLayout so they
+              don't pull in the Firebase SDK and stay fast to load and crawl. */}
+          <Route path="/guias" element={<GuidesIndexPage />} />
+          <Route path="/guias/:slug" element={<GuideArticlePage />} />
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<SignupPage />} />

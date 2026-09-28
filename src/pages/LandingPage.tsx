@@ -213,6 +213,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 text-left"
       >
         <span className="font-semibold text-ink-900">{q}</span>
@@ -220,7 +221,10 @@ function FaqItem({ q, a }: { q: string; a: string }) {
           +
         </span>
       </button>
-      {open && <p className="mt-2 text-sm text-ink-500">{a}</p>}
+      {/* Always rendered so crawlers and AI assistants read the answer; only
+          visually collapsed when closed (better for SEO/GEO and a11y than
+          removing it from the DOM until clicked). */}
+      <p className={cn('mt-2 text-sm text-ink-500', !open && 'sr-only')}>{a}</p>
     </div>
   )
 }
@@ -242,6 +246,9 @@ export function LandingPage() {
             <a href="#precios" className="hover:text-ink-900">
               Precios
             </a>
+            <Link to="/guias" className="hover:text-ink-900">
+              Guías
+            </Link>
             <a href="#faq" className="hover:text-ink-900">
               Preguntas frecuentes
             </a>
@@ -634,6 +641,9 @@ export function LandingPage() {
           <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
             <Logo />
             <nav className="flex flex-wrap items-center justify-center gap-4">
+              <Link to="/guias" className="hover:text-ink-700">
+                Guías
+              </Link>
               <Link to="/terminos" className="hover:text-ink-700">
                 Términos de Servicio
               </Link>
