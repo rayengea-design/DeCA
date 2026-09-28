@@ -98,6 +98,7 @@ export function CorrectDecaPage() {
     setReasonError(null)
     setSubmitting(true)
     try {
+      const idToken = await user.getIdToken()
       const ownParty = { nombre: company.nombre, nif: company.nif, domicilio: company.domicilio }
       const counterpart = {
         nombre: values.counterpartNombre,
@@ -125,6 +126,7 @@ export function CorrectDecaPage() {
         },
         reason.trim(),
         { uid: user.uid, email: user.email ?? '', nombre: profile?.nombre },
+        idToken,
       )
       navigate('/app/historial')
     } finally {

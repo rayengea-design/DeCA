@@ -23,17 +23,13 @@ service cloud.firestore {
       return isMember(companyId) && myProfile().role == 'admin';
     }
 
-    // Real (not just UI) enforcement of the free-trial document cap: 10 DeCA
-    // total per company (kept in sync by hand with TRIAL_DOC_LIMIT in
-    // src/lib/trial.ts — rules can't import that constant), waived entirely
-    // once a paid subscription is active or in its Stripe-retry grace period.
-    // The trial's 5-day cap is enforced client-side only (see trial.ts) —
-    // `createdAt` is stored as an ISO string, not a Firestore Timestamp, so a
-    // clean day-boundary check isn't practical here without a schema change.
-    function canCreateDeca(companyId) {
-      let c = get(/databases/$(database)/documents/companies/$(companyId)).data;
-      return c.get('subscriptionStatus', '') in ['active', 'past_due'] || c.get('decaCount', 0) < 10;
-    }
+    // The free-trial document cap (10 DeCA, and the 5-day window) is enforced
+    // server-side in api/deca/commit.ts, not here: security rules can't count a
+    // collection, and — critically — can't force a decaDoc create to also move
+    // a counter, so any cap based on a client-written `decaCount` was bypassable
+    // by simply not incrementing it. DeCA documents are therefore created only
+    // by the Admin SDK (which bypasses these rules); direct client create is
+    // denied below.
 
     // Real enforcement of each plan's team-size cap (kept in sync by hand
     // with PLANS/memberLimitFor in src/lib/plans.ts). A company with no
@@ -116,13 +112,10 @@ service cloud.firestore {
       allow read: if isMember(companyId);
       allow update: if isAdmin(companyId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'nif', 'domicilio']);
-      // Any member (not just the admin) may bump their own company's DeCA
-      // counter — it's written in the same batch as each new decaDoc, by
-      // whichever team member (driver or admin) is generating it, and only
-      // ever by exactly 1 at a time.
-      allow update: if isMember(companyId) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['decaCount']) &&
-        request.resource.data.decaCount == resource.data.get('decaCount', 0) + 1;
+      // `decaCount` is no longer written by the client at all — it's bumped
+      // server-side by api/deca/commit.ts (Admin SDK) in the same operation
+      // that creates each DeCA, so the free-trial cap can't be sidestepped by
+      // creating documents without moving the counter.
       // The team-seat counter, on the other hand, only ever changes as a
       // side effect of an admin action (creating, disabling or re-enabling a
       // teammate — see the matching writeBatch calls in teamService.ts), so
@@ -138,8 +131,10 @@ service cloud.firestore {
         // member (driver) only ever sees the ones they created themselves.
         allow read: if isMember(companyId) &&
           (isAdmin(companyId) || resource.data.createdBy == request.auth.uid);
-        allow create: if isMember(companyId) && request.resource.data.createdBy == request.auth.uid &&
-          canCreateDeca(companyId);
+        // Created only server-side by api/deca/commit.ts (Admin SDK bypasses
+        // these rules) so the free-trial caps can actually be enforced — see
+        // the note above. Direct client creation is denied.
+        allow create: if false;
         // Only `status`/`supersededBy` (correction flow) and `hidden`
         // (show/hide from the history view) may change after creation — the
         // legal document data itself must never be edited once generated,

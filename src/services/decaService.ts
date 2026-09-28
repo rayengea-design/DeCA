@@ -4,12 +4,10 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
-  increment,
   orderBy,
   query,
   setDoc,
   where,
-  writeBatch,
 } from 'firebase/firestore'
 import { ref, uploadBytes } from 'firebase/storage'
 import { db, storage, storageBucket } from '@/config/firebase'
@@ -34,6 +32,7 @@ export async function createDecaDocument(
   companyId: string,
   values: DecaFormValues,
   creator: Creator,
+  idToken: string,
   correctionInfo?: CorrectionInfo,
 ): Promise<{ record: DecaRecord; pdfBytes: Uint8Array }> {
   const docId = crypto.randomUUID()
@@ -71,15 +70,23 @@ export async function createDecaDocument(
       : {}),
   }
 
-  // Batched (not a plain setDoc): the DeCA record and the company's
-  // `decaCount` bump must succeed or fail together, since `decaCount` is
-  // what firestore.rules checks to enforce the free-trial document cap —
-  // an out-of-sync counter would either lock a paying company out or let a
-  // trial company generate past its limit.
-  const batch = writeBatch(db)
-  batch.set(doc(decaCollection(companyId), docId), record)
-  batch.update(doc(db, 'companies', companyId), { decaCount: increment(1) })
-  await batch.commit()
+  // The Firestore record and the `decaCount` bump are written server-side by
+  // /api/deca/commit (Admin SDK), not from the client: the free-trial caps
+  // can't be enforced by security rules alone (rules can't count a collection
+  // or force a counter to move with a create), so a client writing decaDocs
+  // directly could otherwise create unlimited free documents. The PDF is still
+  // built and uploaded from the browser above; only this trust-sensitive write
+  // is authoritative on the server. Fails closed: if the commit is rejected
+  // (e.g. trial exhausted) the DeCA is not recorded.
+  const res = await fetch('/api/deca/commit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ record }),
+  })
+  const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.error ?? 'No se pudo guardar el DeCA. Inténtalo de nuevo.')
+  }
 
   return { record, pdfBytes }
 }
@@ -97,6 +104,7 @@ export async function correctDecaDocument(
   values: DecaFormValues,
   reason: string,
   updatedBy: Creator,
+  idToken: string,
 ): Promise<DecaRecord> {
   const vehicleChanged =
     values.matriculaTractora !== original.matriculaTractora ||
@@ -111,7 +119,7 @@ export async function correctDecaDocument(
         }
       : values
 
-  const { record: newRecord } = await createDecaDocument(companyId, valuesWithVehicleNote, updatedBy, {
+  const { record: newRecord } = await createDecaDocument(companyId, valuesWithVehicleNote, updatedBy, idToken, {
     originalDocId: original.id,
     reason,
   })
