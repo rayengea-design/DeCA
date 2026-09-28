@@ -20,6 +20,7 @@ import {
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
+import { MarketingHeader } from '@/components/layout/MarketingHeader'
 import { Button } from '@/components/ui/Button'
 import { WHATSAPP_CONTACT_URL } from '@/lib/plans'
 import { cn } from '@/lib/utils'
@@ -233,36 +234,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
-      <header className="sticky top-0 z-40 border-b border-ink-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Logo />
-          <nav className="hidden items-center gap-6 text-sm font-medium text-ink-600 md:flex">
-            <a href="#funciones" className="hover:text-ink-900">
-              Funciones
-            </a>
-            <a href="#para-quien" className="hover:text-ink-900">
-              Para quién es
-            </a>
-            <a href="#precios" className="hover:text-ink-900">
-              Precios
-            </a>
-            <Link to="/guias" className="hover:text-ink-900">
-              Guías
-            </Link>
-            <a href="#faq" className="hover:text-ink-900">
-              Preguntas frecuentes
-            </a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/login">Iniciar sesión</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link to="/registro">Prueba gratis</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <MarketingHeader onLanding />
 
       {/* Hero */}
       <section className="relative overflow-hidden bg-ink-900">

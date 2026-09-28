@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Logo } from '@/components/Logo'
+import { MarketingHeader } from '@/components/layout/MarketingHeader'
 import { Button } from '@/components/ui/Button'
 import { GUIDES } from '@/content/guides'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
@@ -8,20 +8,12 @@ export function GuidesIndexPage() {
   useDocumentMeta(
     'Guías sobre el DeCA | Documento electrónico de Control Administrativo',
     'Guías claras sobre el DeCA: qué es, quién está obligado, sanciones y cómo generarlo. Actualizadas a 2026.',
+    'https://www.kreanex.es/guias',
   )
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="border-b border-ink-100">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
-          <Link to="/">
-            <Logo />
-          </Link>
-          <Button asChild size="sm">
-            <Link to="/registro">Prueba gratis</Link>
-          </Button>
-        </div>
-      </header>
+      <MarketingHeader />
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
         <nav className="mb-6 text-sm text-ink-400">

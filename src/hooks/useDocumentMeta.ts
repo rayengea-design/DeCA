@@ -7,7 +7,7 @@ import { useEffect } from 'react'
  * chrome that do run it, without pulling in a router-head library for what
  * is, in this app, a handful of routes. Restores the landing page's
  * defaults on unmount so navigating away doesn't leave a stale title. */
-export function useDocumentMeta(title: string, description?: string) {
+export function useDocumentMeta(title: string, description?: string, canonical?: string) {
   useEffect(() => {
     const previousTitle = document.title
     document.title = title
@@ -23,11 +23,23 @@ export function useDocumentMeta(title: string, description?: string) {
       meta.setAttribute('content', description)
     }
 
+    // The static canonical in index.html points at the homepage, so without
+    // this every JS route would declare itself a duplicate of "/" and never
+    // rank on its own. Point it at the current page and restore it on unmount.
+    const canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    const previousCanonical = canonicalEl?.getAttribute('href') ?? null
+    if (canonical && canonicalEl) {
+      canonicalEl.setAttribute('href', canonical)
+    }
+
     return () => {
       document.title = previousTitle
       if (description && meta && previousDescription !== null) {
         meta.setAttribute('content', previousDescription)
       }
+      if (canonical && canonicalEl && previousCanonical !== null) {
+        canonicalEl.setAttribute('href', previousCanonical)
+      }
     }
-  }, [title, description])
+  }, [title, description, canonical])
 }
