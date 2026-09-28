@@ -85,6 +85,7 @@ export function NewDecaPage() {
     if (!user || !company || !company.nif || !company.domicilio) return
     setSubmitting(true)
     try {
+      const idToken = await user.getIdToken()
       const ownParty = { nombre: company.nombre, nif: company.nif, domicilio: company.domicilio }
       const counterpart = {
         nombre: values.counterpartNombre,
@@ -111,6 +112,7 @@ export function NewDecaPage() {
           observacionesTransportista: values.observacionesTransportista,
         },
         { uid: user.uid, email: user.email ?? '', nombre: profile?.nombre },
+        idToken,
       )
       setResult(record)
       setPdfBytes(pdfBytes)
