@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import { ensureStripeCustomer, FiscalSyncError } from '../_lib/customerFiscalSync.js'
 import { ApiError, requireCompanyAdmin } from '../_lib/requireCompanyAdmin.js'
 import { getStripe, PRICE_IDS, type PlanId } from '../_lib/stripe.js'
+import { syncSubscriptionToFirestore } from '../_lib/syncSubscriptionToFirestore.js'
 
 /** Creates a subscription in `incomplete` status and hands back its first
  * invoice's PaymentIntent client secret, so the browser can confirm payment
@@ -39,6 +40,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     if (customerId !== company.stripeCustomerId) {
       await companyRef.update({ stripeCustomerId: customerId })
+    }
+
+    // Stripe-authoritative double-subscribe guard. The Firestore check at the
+    // top of this handler can be briefly stale: in the window between a first
+    // payment confirming in Stripe and the fast-path/webhook writing `active`
+    // back to Firestore, a company could otherwise confirm a second payment
+    // for a different plan and end up billed for two subscriptions at once.
+    // Checking Stripe itself — the source of truth — closes that race. A
+    // previously `canceled` subscription is intentionally ignored here so
+    // resubscribing after a cancellation still works.
+    const existingSubs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 })
+    const liveSub = existingSubs.data.find(
+      (s) => s.status === 'active' || s.status === 'past_due' || s.status === 'trialing' || s.status === 'unpaid',
+    )
+    if (liveSub) {
+      // Firestore was out of date — repair it so the UI stops offering
+      // "subscribe" and reflects the subscription that already exists.
+      await syncSubscriptionToFirestore(liveSub).catch(() => {})
+      return res.status(400).json({ error: 'Ya tienes una suscripción activa. Usa "Cambiar de plan" en su lugar.' })
     }
 
     const subscription = await stripe.subscriptions.create({

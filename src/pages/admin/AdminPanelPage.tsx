@@ -81,8 +81,6 @@ export function AdminPanelPage() {
     }
   }
 
-  if (!authLoading && !user) return <Navigate to="/login" replace />
-
   async function handleGrant(companyId: string) {
     if (!user) return
     const plan = selectedPlan[companyId] ?? 'basico'
@@ -133,6 +131,12 @@ export function AdminPanelPage() {
       return true
     })
   }, [companies, planFilter, statusFilter, search])
+
+  // Early returns live here, after every hook above, so the hook call order
+  // stays identical on every render (Rules of Hooks) — otherwise the first
+  // render calls useMemo and, once auth resolves to "logged out", the next
+  // render returns before it, crashing the page.
+  if (!authLoading && !user) return <Navigate to="/login" replace />
 
   if (forbidden) {
     return (
