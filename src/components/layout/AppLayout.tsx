@@ -1,6 +1,7 @@
 import { Bookmark, CreditCard, FileText, History, LogOut, Users } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
+import { TrialBanner } from '@/components/TrialBanner'
 import { useAuth } from '@/context/AuthContext'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { cn } from '@/lib/utils'
@@ -67,6 +68,7 @@ export function AppLayout() {
         </nav>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+        <TrialBanner />
         <Outlet />
       </main>
     </div>

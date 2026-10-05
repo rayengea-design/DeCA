@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Bookmark, CheckCircle2, Copy, Download, Loader2, MessageCircle, Plus, Settings2 } from 'lucide-react'
 import QRCode from 'qrcode'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { DecaFormFields } from '@/components/deca/DecaFormFields'
 import { SavedTripPicker } from '@/components/deca/SavedTripPicker'
 import { MissingCompanyInfoNotice } from '@/components/MissingCompanyInfoNotice'
@@ -24,6 +24,9 @@ import type { DecaRecord, SavedCounterparty, SavedTrip } from '@/types/deca'
 
 export function NewDecaPage() {
   const { user, profile, company } = useAuth()
+  const location = useLocation()
+  const duplicateApplied = useRef(false)
+  const [duplicatedNotice, setDuplicatedNotice] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<DecaRecord | null>(null)
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
@@ -59,6 +62,37 @@ export function NewDecaPage() {
     listSavedTrips(company.id).then(setSavedTrips)
     listSavedCounterparties(company.id).then(setCounterparties)
   }, [company])
+
+  // "Duplicar" from the history page hands a previous DeCA through router
+  // state: prefill the form with its journey/cargo/vehicle so only the date
+  // (reset to today) and anything that changed need touching. The "own" party
+  // is intentionally never copied — it's locked to the company's current
+  // registered identity by DecaFormFields. The ref guard applies it just once
+  // so later edits/re-renders don't overwrite what the user is typing.
+  useEffect(() => {
+    const dup = (location.state as { duplicate?: DecaRecord } | null)?.duplicate
+    if (!dup || duplicateApplied.current) return
+    duplicateApplied.current = true
+    const counterpart = dup.ownRole === 'cargador' ? dup.transportista : dup.cargador
+    reset({
+      ownRole: dup.ownRole,
+      counterpartNombre: counterpart.nombre,
+      counterpartNif: counterpart.nif,
+      counterpartDomicilio: counterpart.domicilio,
+      origen: dup.origen,
+      destino: dup.destino,
+      naturalezaMercancia: dup.naturalezaMercancia,
+      peso: dup.peso,
+      bultos: dup.bultos,
+      matriculaTractora: dup.matriculaTractora,
+      matriculaRemolque: dup.matriculaRemolque,
+      autorizacionEspecial: dup.autorizacionEspecial,
+      observacionesCargador: dup.observacionesCargador,
+      observacionesTransportista: dup.observacionesTransportista,
+      fechaTransporte: new Date().toISOString().slice(0, 10),
+    })
+    setDuplicatedNotice(true)
+  }, [location.state, reset])
 
   const origenSuggestions = [...new Set(savedTrips.map((t) => t.origen).filter(Boolean))]
   const destinoSuggestions = [...new Set(savedTrips.map((t) => t.destino).filter(Boolean))]
@@ -178,6 +212,7 @@ export function NewDecaPage() {
     setSaveAsTrip(false)
     setTripLabel('')
     setSaveCounterparty(false)
+    setDuplicatedNotice(false)
     reset({ ownRole: role, fechaTransporte: new Date().toISOString().slice(0, 10) })
   }
 
@@ -239,6 +274,12 @@ export function NewDecaPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="mx-auto flex max-w-2xl flex-col gap-5">
+      {duplicatedNotice && (
+        <div className="flex items-center gap-2 rounded-md bg-brand-50 px-4 py-3 text-sm text-brand-700">
+          <Copy className="h-4 w-4 shrink-0" />
+          Datos copiados de un DeCA anterior. Revísalos y ajusta lo que necesites — la fecha se ha puesto a hoy.
+        </div>
+      )}
       {(savedTrips.length > 0 || counterparties.length > 0) && (
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">

@@ -1,6 +1,6 @@
-import { Download, Eye, EyeOff, FileDown, Loader2, MessageCircle, Pencil } from 'lucide-react'
+import { Copy, Download, Eye, EyeOff, FileDown, Loader2, MessageCircle, Pencil } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
@@ -24,6 +24,7 @@ function StatusBadge({ status }: { status: DecaRecord['status'] }) {
 
 export function HistoryPage() {
   const { user, profile, company } = useAuth()
+  const navigate = useNavigate()
   const isAdmin = profile?.role === 'admin'
   const [docs, setDocs] = useState<DecaRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,6 +71,14 @@ export function HistoryPage() {
     } finally {
       setPendingId(null)
     }
+  }
+
+  // Reuse an existing DeCA's trip/cargo/vehicle data to prefill a new one —
+  // the "own" party is never carried (it's locked to the company's current
+  // identity on the new-DeCA form), only the counterpart and the journey. The
+  // record travels in router state; NewDecaPage reads it and resets the form.
+  function handleDuplicate(d: DecaRecord) {
+    navigate('/app', { state: { duplicate: d } })
   }
 
   async function handleShareWhatsApp(d: DecaRecord) {
@@ -220,6 +229,14 @@ export function HistoryPage() {
                       </Link>
                     )}
                     <button
+                      type="button"
+                      onClick={() => handleDuplicate(d)}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-900"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Duplicar
+                    </button>
+                    <button
                       disabled={pendingId === d.id}
                       onClick={() => handleSetHidden(d.id, !d.hidden)}
                       className="inline-flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-900 disabled:opacity-50"
@@ -300,6 +317,14 @@ export function HistoryPage() {
                             <Pencil className="h-3.5 w-3.5" />
                           </Link>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicate(d)}
+                          title="Duplicar en un DeCA nuevo"
+                          className="inline-flex items-center gap-1 text-ink-400 hover:text-ink-900"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           disabled={pendingId === d.id}
                           onClick={() => handleSetHidden(d.id, !d.hidden)}

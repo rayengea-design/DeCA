@@ -47,3 +47,21 @@ export async function changePlan(user: User, plan: SelfServePlanId): Promise<{ s
 export async function setSubscriptionCancellation(user: User, cancel: boolean): Promise<void> {
   await callBillingApi('/api/stripe/cancel-subscription', user, { cancel })
 }
+
+export interface InvoiceSummary {
+  id: string
+  number: string | null
+  created: number // unix seconds
+  total: number // smallest currency unit (céntimos), IVA incluido
+  currency: string
+  status: string | null
+  hostedUrl: string | null
+  pdfUrl: string | null
+}
+
+/** The company's Stripe invoices (most recent first), for the in-app billing
+ * history. Empty for a company that never subscribed. */
+export async function listInvoices(user: User): Promise<InvoiceSummary[]> {
+  const data = await callBillingApi('/api/stripe/invoices', user)
+  return (data.invoices as InvoiceSummary[]) ?? []
+}

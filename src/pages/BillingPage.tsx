@@ -1,6 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, CheckCircle2, Clock, ExternalLink, FileText, Gift, Loader2, Users, XCircle } from 'lucide-react'
-import { useState } from 'react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Download,
+  ExternalLink,
+  FileText,
+  Gift,
+  Loader2,
+  Receipt,
+  Users,
+  XCircle,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -17,6 +29,8 @@ import { formatDate } from '@/lib/utils'
 import {
   changePlan,
   createSubscriptionIntent,
+  type InvoiceSummary,
+  listInvoices,
   openBillingPortal,
   setSubscriptionCancellation,
   syncSubscription,
@@ -31,6 +45,21 @@ const infoSchema = z.object({
 
 type InfoFormValues = z.infer<typeof infoSchema>
 
+const INVOICE_STATUS_LABELS: Record<string, string> = {
+  paid: 'Pagada',
+  open: 'Pendiente',
+  uncollectible: 'Impagada',
+  void: 'Anulada',
+}
+
+function formatInvoiceAmount(total: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: currency.toUpperCase() }).format(total / 100)
+  } catch {
+    return `${(total / 100).toFixed(2)} ${currency.toUpperCase()}`
+  }
+}
+
 export function BillingPage() {
   const { user, profile, company } = useAuth()
   const [searchParams] = useSearchParams()
@@ -44,12 +73,24 @@ export function BillingPage() {
   const [paymentSucceeded, setPaymentSucceeded] = useState(false)
   const [cancelPending, setCancelPending] = useState(false)
   const [cancelToggled, setCancelToggled] = useState<'cancel' | 'resume' | null>(null)
+  const [invoices, setInvoices] = useState<InvoiceSummary[] | null>(null)
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<InfoFormValues>({ resolver: zodResolver(infoSchema) })
+
+  // Load the company's Stripe invoices for the history card below. Kept above
+  // the early returns so the hook order never changes (Rules of Hooks); it
+  // no-ops until `user` is ready, and a failure just shows no history rather
+  // than an error (the Stripe portal is still a fallback).
+  useEffect(() => {
+    if (!user) return
+    listInvoices(user)
+      .then(setInvoices)
+      .catch(() => setInvoices([]))
+  }, [user])
 
   if (profile && profile.role !== 'admin') return <Navigate to="/app" replace />
   if (!user || !company) return null
@@ -360,6 +401,61 @@ export function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      {invoices && invoices.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-ink-400" />
+              Historial de facturas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col divide-y divide-ink-100">
+            {invoices.map((inv) => (
+              <div key={inv.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <div>
+                  <p className="text-sm font-medium text-ink-900">
+                    {inv.number ?? 'Factura'}
+                    <span className="ml-2 text-xs font-normal text-ink-400">
+                      {formatDate(new Date(inv.created * 1000).toISOString())}
+                    </span>
+                  </p>
+                  <p className="text-xs text-ink-400">
+                    {formatInvoiceAmount(inv.total, inv.currency)}
+                    {inv.status && (INVOICE_STATUS_LABELS[inv.status] || inv.status)
+                      ? ` · ${INVOICE_STATUS_LABELS[inv.status] ?? inv.status}`
+                      : ''}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {inv.pdfUrl && (
+                    <a
+                      href={inv.pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      PDF
+                    </a>
+                  )}
+                  {inv.hostedUrl && (
+                    <a
+                      href={inv.hostedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-ink-500 hover:text-ink-900"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Ver
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {!hasFiscalInfo && (
         <Card>
