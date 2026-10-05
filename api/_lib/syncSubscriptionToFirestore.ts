@@ -38,8 +38,28 @@ export async function syncSubscriptionToFirestore(subscription: Stripe.Subscript
   // later got a gifted plan on top) — without this guard, a delayed webhook
   // for that old subscription could overwrite the gift.
   const companySnap = await companyRef.get()
-  if (companySnap.data()?.comped) {
+  const companyData = companySnap.data()
+  if (companyData?.comped) {
     console.log('Ignorando sync de suscripción: empresa con plan regalado', companyId)
+    return
+  }
+
+  // Don't let an event for a subscription that ISN'T this company's current
+  // one clobber a good state. The same companyId rides on every subscription
+  // the company ever created — including abandoned second checkout attempts
+  // that Stripe auto-expires ~23h later, firing `incomplete_expired` /
+  // `deleted`. Without this guard those would overwrite a perfectly valid
+  // active subscription and drop a paying customer back to the trial.
+  //   - the company's CURRENT tracked subscription always syncs, so its own
+  //     cancellation / expiry / plan change / failed payment do propagate;
+  //   - a DIFFERENT subscription is only adopted when it's in a live/billable
+  //     state (a genuine new or replacement subscription becoming active),
+  //     never when it's incomplete / expired / canceled / unpaid.
+  const isCurrent = companyData?.stripeSubscriptionId === subscription.id
+  const isLive =
+    subscription.status === 'active' || subscription.status === 'past_due' || subscription.status === 'trialing'
+  if (!isCurrent && !isLive) {
+    console.log('Ignorando sync: suscripción no-actual en estado', subscription.status, subscription.id)
     return
   }
 
@@ -58,6 +78,6 @@ export async function syncSubscriptionToFirestore(subscription: Stripe.Subscript
     // that's when Stripe swaps the price and this event fires with it
     // already resolved to the plan that was pending, so this is where
     // `pendingPlan` gets cleared, not at the moment the schedule was set up.
-    ...(companySnap.data()?.pendingPlan === resolvedPlan ? { pendingPlan: null } : {}),
+    ...(companyData?.pendingPlan === resolvedPlan ? { pendingPlan: null } : {}),
   })
 }
