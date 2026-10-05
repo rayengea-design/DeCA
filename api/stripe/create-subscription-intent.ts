@@ -65,7 +65,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer: customerId,
       items: [{ price: PRICE_IDS[plan] }],
       payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
+      payment_settings: {
+        save_default_payment_method: 'on_subscription',
+        // Only methods that support off-session recurring charges, so the
+        // monthly renewal can actually be collected. Left unset, Stripe offers
+        // EVERY method enabled on the account (Revolut Pay, Bizum, Klarna…); a
+        // customer who picks a non-reusable one pays the first invoice fine but
+        // no default payment method gets saved, and the next renewal silently
+        // fails. Card is universal and recurring-capable and is active on the
+        // account; add 'sepa_debit' here too once it's enabled in Stripe.
+        payment_method_types: ['card'],
+      },
       automatic_tax: { enabled: true },
       metadata: { companyId: companyRef.id, plan },
       expand: ['latest_invoice'],
