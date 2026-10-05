@@ -45,6 +45,19 @@ const STATUS_LABELS: Record<string, string> = {
   unpaid: 'Impagada',
 }
 
+// Net monthly price per plan (sin IVA), matching the live Stripe prices — used
+// only to compute MRR/ARR for the admin dashboard. flota_plus is sales-assisted
+// with a custom price, so it contributes 0 to the automatic figure.
+const PLAN_MRR: Record<PlanId, number> = { basico: 5, flota: 25, empresa: 75, flota_plus: 0 }
+
+function eur(n: number): string {
+  try {
+    return n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
+  } catch {
+    return `${n} €`
+  }
+}
+
 export function AdminPanelPage() {
   const { user, loading: authLoading, loginWithGoogle } = useAuth()
   const [companies, setCompanies] = useState<AdminCompanyRow[] | null>(null)
@@ -132,6 +145,27 @@ export function AdminPanelPage() {
     })
   }, [companies, planFilter, statusFilter, search])
 
+  // Business metrics for the dashboard — always over the FULL list, never the
+  // filtered one (a filter narrows the table below, not the global summary).
+  const metrics = useMemo(() => {
+    if (!companies) return null
+    const paying = companies.filter((c) => c.subscriptionStatus === 'active' && !c.comped)
+    const mrr = paying.reduce((sum, c) => sum + (c.plan ? (PLAN_MRR[c.plan] ?? 0) : 0), 0)
+    return {
+      total: companies.length,
+      paying: paying.length,
+      trial: companies.filter((c) => !c.plan && !c.comped).length,
+      comped: companies.filter((c) => c.comped).length,
+      pastDue: companies.filter((c) => c.subscriptionStatus === 'past_due').length,
+      canceled: companies.filter((c) => c.subscriptionStatus === 'canceled').length,
+      cancelingAtEnd: companies.filter((c) => c.cancelAtPeriodEnd && !c.comped).length,
+      mrr,
+      arr: mrr * 12,
+      // Conversión = qué porcentaje de todas las altas acaban pagando.
+      conversion: companies.length ? Math.round((paying.length / companies.length) * 100) : 0,
+    }
+  }, [companies])
+
   // Early returns live here, after every hook above, so the hook call order
   // stays identical on every render (Rules of Hooks) — otherwise the first
   // render calls useMemo and, once auth resolves to "logged out", the next
@@ -184,25 +218,35 @@ export function AdminPanelPage() {
           </div>
         ) : (
           <>
-            <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                { label: 'Empresas', value: companies.length },
-                {
-                  label: 'Suscripciones activas',
-                  value: companies.filter((c) => c.subscriptionStatus === 'active' && !c.comped).length,
-                },
-                { label: 'Planes regalados', value: companies.filter((c) => c.comped).length },
-                {
-                  label: 'Pago pendiente',
-                  value: companies.filter((c) => c.subscriptionStatus === 'past_due').length,
-                },
-              ].map((stat) => (
-                <div key={stat.label} className="rounded-lg border border-ink-100 bg-white px-4 py-3">
-                  <p className="text-lg font-bold text-ink-900">{stat.value}</p>
-                  <p className="text-xs text-ink-400">{stat.label}</p>
-                </div>
-              ))}
-            </div>
+            {metrics && (
+              <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { label: 'MRR (sin IVA)', value: eur(metrics.mrr), accent: true },
+                  { label: 'ARR estimado', value: eur(metrics.arr), accent: true },
+                  { label: 'Conversión a pago', value: `${metrics.conversion}%`, accent: true },
+                  { label: 'Empresas', value: metrics.total },
+                  { label: 'De pago', value: metrics.paying },
+                  { label: 'En prueba', value: metrics.trial },
+                  { label: 'Planes regalados', value: metrics.comped },
+                  { label: 'Pago pendiente', value: metrics.pastDue },
+                  { label: 'Canceladas', value: metrics.canceled },
+                  { label: 'Cancelan al vencer', value: metrics.cancelingAtEnd },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className={
+                      'rounded-lg border px-4 py-3 ' +
+                      (stat.accent ? 'border-brand-200 bg-brand-50' : 'border-ink-100 bg-white')
+                    }
+                  >
+                    <p className={'text-lg font-bold ' + (stat.accent ? 'text-brand-700' : 'text-ink-900')}>
+                      {stat.value}
+                    </p>
+                    <p className={'text-xs ' + (stat.accent ? 'text-brand-600' : 'text-ink-400')}>{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Input

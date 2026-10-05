@@ -3,12 +3,20 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 import { useAuth } from '@/context/AuthContext'
 import { decaDocsToCsv, downloadCsv } from '@/lib/csvExport'
 import { cn, formatDateTime, shareDecaPdf } from '@/lib/utils'
 import { listDecaDocuments, setDecaHidden } from '@/services/decaService'
 import { decaFileName } from '@/services/pdfGenerator'
 import type { DecaRecord } from '@/types/deca'
+
+/** The party on a DeCA that ISN'T the user's own company — the one worth
+ * filtering/searching by. Mirrors the role logic used across the app: if we
+ * were the cargador, the counterpart is the transportista, and vice versa. */
+function counterpartOf(d: DecaRecord) {
+  return d.ownRole === 'cargador' ? d.transportista : d.cargador
+}
 
 function StatusBadge({ status }: { status: DecaRecord['status'] }) {
   return (
@@ -29,7 +37,10 @@ export function HistoryPage() {
   const [docs, setDocs] = useState<DecaRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [matricula, setMatricula] = useState('')
-  const [fecha, setFecha] = useState('')
+  const [contraparte, setContraparte] = useState('')
+  const [conductor, setConductor] = useState('all')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
   const [view, setView] = useState<'visibles' | 'ocultos'>('visibles')
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [sharingId, setSharingId] = useState<string | null>(null)
@@ -48,13 +59,33 @@ export function HistoryPage() {
 
   const filtered = useMemo(() => {
     const matriculaTerm = matricula.trim().toLowerCase()
-    return docs
-      .filter((d) => (view === 'ocultos' ? d.hidden : !d.hidden))
-      .filter((d) => !matriculaTerm || d.matriculaTractora.toLowerCase().includes(matriculaTerm))
-      .filter((d) => !fecha || d.fechaTransporte === fecha)
-  }, [docs, matricula, fecha, view])
+    const contraparteTerm = contraparte.trim().toLowerCase()
+    return (
+      docs
+        .filter((d) => (view === 'ocultos' ? d.hidden : !d.hidden))
+        .filter((d) => !matriculaTerm || d.matriculaTractora.toLowerCase().includes(matriculaTerm))
+        .filter((d) => {
+          if (!contraparteTerm) return true
+          const c = counterpartOf(d)
+          return c.nombre.toLowerCase().includes(contraparteTerm) || c.nif.toLowerCase().includes(contraparteTerm)
+        })
+        .filter((d) => conductor === 'all' || d.createdBy === conductor)
+        // fechaTransporte is a 'YYYY-MM-DD' string, so plain string comparison
+        // gives a correct inclusive date range.
+        .filter((d) => !desde || d.fechaTransporte >= desde)
+        .filter((d) => !hasta || d.fechaTransporte <= hasta)
+    )
+  }, [docs, matricula, contraparte, conductor, desde, hasta, view])
 
   const hiddenCount = useMemo(() => docs.filter((d) => d.hidden).length, [docs])
+
+  // Distinct creators, for the admin's "por conductor" filter (a driver only
+  // ever sees their own DeCA, so the filter is pointless for them).
+  const drivers = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const d of docs) if (!map.has(d.createdBy)) map.set(d.createdBy, d.createdByName || d.createdByEmail)
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [docs])
 
   function handleExportCsv() {
     const csv = decaDocsToCsv(filtered)
@@ -136,19 +167,57 @@ export function HistoryPage() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-        <Input
-          placeholder="Buscar por matrícula..."
-          value={matricula}
-          onChange={(e) => setMatricula(e.target.value)}
-        />
-        <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+      <div className="flex flex-col gap-3 rounded-lg border border-ink-100 bg-white p-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-ink-400">Matrícula</label>
+          <Input
+            placeholder="Buscar matrícula..."
+            value={matricula}
+            onChange={(e) => setMatricula(e.target.value)}
+            className="sm:w-40"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-ink-400">Empresa contraparte</label>
+          <Input
+            placeholder="Nombre o NIF..."
+            value={contraparte}
+            onChange={(e) => setContraparte(e.target.value)}
+            className="sm:w-44"
+          />
+        </div>
+        {isAdmin && drivers.length > 1 && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-ink-400">Conductor</label>
+            <Select value={conductor} onValueChange={setConductor}>
+              <SelectTrigger className="sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los conductores</SelectItem>
+                {drivers.map(([uid, name]) => (
+                  <SelectItem key={uid} value={uid}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-ink-400">Desde</label>
+          <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="sm:w-40" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-ink-400">Hasta</label>
+          <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="sm:w-40" />
+        </div>
         <Button
           type="button"
           variant="outline"
           onClick={handleExportCsv}
           disabled={filtered.length === 0}
-          className="sm:w-auto"
+          className="sm:ml-auto"
         >
           <FileDown className="h-4 w-4" />
           Exportar CSV
