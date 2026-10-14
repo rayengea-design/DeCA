@@ -129,6 +129,9 @@ function commercialBodyHtml(page: CommercialPage): string {
         .map((f) => `<div><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>`)
         .join('')}</section>`
     : ''
+  const related = COMMERCIAL_PAGES.filter((p) => p.slug !== page.slug)
+    .map((p) => `<a href="${SITE}/${p.slug}">${esc(p.navLabel)}</a>`)
+    .join('\n')
   return `${navHtml()}
 <main>
 <nav aria-label="Miga de pan"><a href="${SITE}/">Inicio</a> · ${esc(page.h1)}</nav>
@@ -141,6 +144,8 @@ ${midCtaHtml()}
 ${faqs}
 </article>
 ${ctaHtml()}
+<nav aria-label="Más sobre DeCA">${related}
+<a href="${SITE}/guias">Guías sobre el DeCA</a></nav>
 </main>`
 }
 

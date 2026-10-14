@@ -20,6 +20,8 @@ export interface CommercialPage {
   slug: string
   metaTitle: string
   h1: string
+  /** Short anchor text used when linking between commercial pages. */
+  navLabel: string
   description: string
   datePublished: string
   dateModified: string
@@ -34,6 +36,7 @@ export const COMMERCIAL_PAGES: CommercialPage[] = [
     slug: 'generar-deca',
     metaTitle: 'Generar el DeCA online | Documento oficial con QR en 1 minuto',
     h1: 'Generar el DeCA online en menos de un minuto',
+    navLabel: 'Generar el DeCA online',
     description:
       'Genera el DeCA (Documento electrónico de Control Administrativo) oficial, con código QR de verificación, desde el móvil o el ordenador. Prueba gratis, sin tarjeta.',
     datePublished: '2026-10-14',
@@ -97,6 +100,7 @@ export const COMMERCIAL_PAGES: CommercialPage[] = [
     slug: 'programa-deca',
     metaTitle: 'Programa para el DeCA | Software del Documento de Control Administrativo',
     h1: 'El programa para generar el DeCA de tu empresa de transporte',
+    navLabel: 'Programa para el DeCA',
     description:
       'Software específico para el DeCA: genera, corrige, guarda y comparte el Documento electrónico de Control Administrativo sin instalar nada. Prueba gratis.',
     datePublished: '2026-10-14',
@@ -159,6 +163,7 @@ export const COMMERCIAL_PAGES: CommercialPage[] = [
     slug: 'alternativa-simple-ministerio',
     metaTitle: 'Alternativa a SIMPLE del Ministerio para el DeCA | DeCA',
     h1: 'La alternativa a SIMPLE, la herramienta del Ministerio, para tu DeCA',
+    navLabel: 'Alternativa a SIMPLE del Ministerio',
     description:
       'Si la herramienta SIMPLE del Ministerio se te hace lenta, DeCA genera el mismo documento oficial con QR en menos de un minuto, con historial y pensado para el móvil.',
     datePublished: '2026-10-14',
@@ -210,6 +215,153 @@ export const COMMERCIAL_PAGES: CommercialPage[] = [
         q: '¿Puedo dejar de usar SIMPLE?',
         a: 'Puedes generar y llevar tu DeCA con DeCA cumpliendo la normativa. La obligación de llevar el documento sigue siendo tuya; lo que cambia es la rapidez y el orden con que lo generas.',
       },
+    ],
+  },
+  {
+    slug: 'deca-precio',
+    metaTitle: 'Precio del DeCA | Cuánto cuesta generar el Documento de Control Administrativo',
+    h1: '¿Cuánto cuesta el DeCA? Precios y planes',
+    navLabel: 'Precio del DeCA',
+    description:
+      'Precios de DeCA para generar el Documento electrónico de Control Administrativo: planes desde 5 €/mes con DeCA ilimitados, sin permanencia y con prueba gratis sin tarjeta.',
+    datePublished: '2026-10-14',
+    dateModified: '2026-10-14',
+    intro:
+      'Generar el DeCA cuesta desde 5 €/mes con documentos ilimitados, y puedes probarlo gratis antes de pagar. Sin permanencia y cambiando de plan cuando quieras.',
+    sections: [
+      {
+        heading: 'Planes y precios',
+        paragraphs: ['Eliges el plan por el número de conductores de tu empresa (precios sin IVA):'],
+        bullets: [
+          'Básico — 5 €/mes: hasta 3 conductores, DeCA ilimitados, historial y exportación CSV.',
+          'Flota — 25 €/mes: hasta 10 conductores, corrección de documentos y soporte prioritario.',
+          'Empresa — 75 €/mes: hasta 50 conductores, con todo lo del plan Flota.',
+          'Flota+ — a medida: más de 50 conductores, facturación y alta del equipo a medida.',
+        ],
+      },
+      {
+        heading: 'Qué incluye cualquier plan',
+        paragraphs: [
+          'Todos los planes incluyen DeCA ilimitados, el PDF oficial con código QR de verificación, historial buscable y exportable a CSV, envío por WhatsApp, funcionamiento en el móvil sin cobertura (PWA) y factura automática con el IVA desglosado en cada cobro.',
+        ],
+      },
+      {
+        heading: 'Prueba gratis antes de pagar',
+        paragraphs: [
+          'Puedes generar hasta 10 DeCA o usarlo durante 5 días —lo que llegue antes— sin introducir ninguna tarjeta de crédito. Así compruebas con tus propios portes si te encaja antes de elegir plan.',
+        ],
+      },
+      {
+        heading: 'Sin permanencia y con factura',
+        paragraphs: [
+          'Cambias de plan o cancelas cuando quieras desde tu panel, sin llamadas ni permanencia. Si cambias de plan, el nuevo precio se aplica en tu siguiente renovación, sin cobros sorpresa a mitad de mes.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        q: '¿Cuánto cuesta el DeCA más barato?',
+        a: 'El plan Básico cuesta 5 €/mes (sin IVA) e incluye DeCA ilimitados para hasta 3 conductores.',
+      },
+      {
+        q: '¿El precio incluye IVA?',
+        a: 'No. El precio de cada plan no incluye IVA; se calcula y se muestra desglosado (21 %) en el momento del pago, y cada cobro genera su factura.',
+      },
+      { q: '¿Hay permanencia?', a: 'No. Puedes cancelar o cambiar de plan cuando quieras desde tu panel.' },
+      {
+        q: '¿Puedo probarlo gratis?',
+        a: 'Sí: 10 DeCA o 5 días de prueba, sin tarjeta de crédito.',
+      },
+    ],
+  },
+  {
+    slug: 'deca-gratis',
+    metaTitle: 'Generar el DeCA gratis | Prueba 10 DeCA o 5 días sin tarjeta',
+    h1: 'Generar el DeCA gratis: prueba sin tarjeta',
+    navLabel: 'Probar el DeCA gratis',
+    description:
+      'Prueba DeCA gratis: genera hasta 10 DeCA o durante 5 días sin tarjeta de crédito. Después, planes con documentos ilimitados desde 5 €/mes.',
+    datePublished: '2026-10-14',
+    dateModified: '2026-10-14',
+    intro:
+      'Puedes empezar a generar tus DeCA gratis: 10 documentos o 5 días de prueba, lo que llegue antes, sin introducir ninguna tarjeta de crédito.',
+    sections: [
+      {
+        heading: 'Qué incluye la prueba gratis',
+        bullets: [
+          '10 DeCA o 5 días de uso, lo que ocurra primero.',
+          'Sin tarjeta de crédito y sin compromiso.',
+          'Todas las funciones: PDF con QR, historial, WhatsApp y uso en el móvil.',
+          'Los DeCA que generes durante la prueba se conservan.',
+        ],
+      },
+      {
+        heading: 'Qué pasa cuando termina la prueba',
+        paragraphs: [
+          'Para seguir generando DeCA nuevos, eliges un plan desde 5 €/mes con documentos ilimitados. Los DeCA que ya hayas generado se conservan y siguen siendo descargables durante el plazo legal de 1 año, aunque no continúes con un plan.',
+        ],
+      },
+      {
+        heading: 'Por qué la prueba es gratis pero el servicio no es gratis para siempre',
+        paragraphs: [
+          'Mantener un servicio que genera documentos oficiales con cumplimiento verificado, almacenamiento y soporte tiene un coste, por eso el plan más barato son 5 €/mes. Pero la prueba es real: sin tarjeta y con todas las funciones, para que decidas con tus propios portes.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        q: '¿Es gratis de verdad?',
+        a: 'La prueba sí: 10 DeCA o 5 días sin tarjeta de crédito. Para seguir generando documentos después, hay planes desde 5 €/mes.',
+      },
+      { q: '¿Necesito tarjeta para la prueba?', a: 'No. La prueba no pide ningún dato de pago.' },
+      {
+        q: '¿Qué pasa con mis DeCA si no continúo?',
+        a: 'Se conservan y se pueden descargar durante el plazo legal de 1 año. Lo que se detiene es poder generar DeCA nuevos.',
+      },
+      { q: '¿Cuánto dura la prueba?', a: '10 DeCA o 5 días, lo que llegue antes.' },
+    ],
+  },
+  {
+    slug: 'deca-paqueteria',
+    metaTitle: 'DeCA para paquetería, reparto y última milla | DeCA',
+    h1: 'El DeCA para paquetería, reparto y última milla',
+    navLabel: 'DeCA para paquetería',
+    description:
+      'Genera el DeCA para transporte de paquetería y reparto de última milla: documento oficial con QR en menos de un minuto, desde el móvil del repartidor.',
+    datePublished: '2026-10-14',
+    dateModified: '2026-10-14',
+    intro:
+      'En paquetería y última milla se hacen muchos portes al día. DeCA genera cada Documento electrónico de Control Administrativo en menos de un minuto, desde el móvil, reutilizando las rutas habituales.',
+    sections: [
+      {
+        heading: 'Pensado para el ritmo de la última milla',
+        bullets: [
+          'Menos de un minuto por documento, para no frenar el reparto.',
+          'Rutas y contrapartes habituales guardadas: el siguiente DeCA se rellena en segundos.',
+          'Desde el móvil del repartidor, sin depender de un ordenador en la nave.',
+          'Sigue funcionando sin cobertura (PWA) y envías el PDF por WhatsApp en un toque.',
+        ],
+      },
+      {
+        heading: 'Varios repartidores, un solo panel',
+        paragraphs: [
+          'Cada repartidor tiene su propio acceso y genera solo sus DeCA; el responsable los ve todos desde un único panel y puede corregir cualquiera sin perder la trazabilidad del documento original.',
+        ],
+      },
+      {
+        heading: '¿El DeCA aplica a la paquetería?',
+        paragraphs: [
+          'El DeCA es el documento de control del transporte de mercancías por carretera. Si tu actividad de paquetería o reparto está sujeta a esa obligación según la normativa, DeCA te genera el documento conforme a la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026, con su código QR de verificación. Ante dudas sobre si un porte concreto está obligado, consulta la normativa o a tu gestoría.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        q: '¿Sirve para reparto de última milla?',
+        a: 'Sí: si tu transporte está sujeto a la obligación del DeCA, la herramienta te genera el documento oficial para cada porte, pensada para hacerlo rápido y desde el móvil.',
+      },
+      { q: '¿Puedo usarlo con varios repartidores?', a: 'Sí. Cada repartidor tiene su acceso y el responsable los ve todos.' },
+      { q: '¿Funciona sin cobertura?', a: 'Sí. Se instala como app (PWA) y sigue funcionando aunque falle la conexión.' },
     ],
   },
 ]

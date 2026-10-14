@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { MarketingHeader } from '@/components/layout/MarketingHeader'
 import { Button } from '@/components/ui/Button'
-import { getCommercialPage } from '@/content/commercial'
+import { COMMERCIAL_PAGES, getCommercialPage } from '@/content/commercial'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { useJsonLd } from '@/hooks/useJsonLd'
 
@@ -141,6 +141,19 @@ export function CommercialPage({ slug }: { slug: string }) {
             </Link>
           </p>
         </aside>
+
+        <nav aria-label="Más sobre DeCA" className="mt-10 border-t border-ink-100 pt-6">
+          <p className="text-sm font-semibold text-ink-900">Más sobre DeCA</p>
+          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {COMMERCIAL_PAGES.filter((p) => p.slug !== slug).map((p) => (
+              <li key={p.slug}>
+                <Link to={`/${p.slug}`} className="text-brand-600 hover:underline">
+                  {p.navLabel}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </main>
     </div>
   )

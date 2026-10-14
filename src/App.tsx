@@ -82,6 +82,9 @@ export default function App() {
           <Route path="/generar-deca" element={<CommercialPage slug="generar-deca" />} />
           <Route path="/programa-deca" element={<CommercialPage slug="programa-deca" />} />
           <Route path="/alternativa-simple-ministerio" element={<CommercialPage slug="alternativa-simple-ministerio" />} />
+          <Route path="/deca-precio" element={<CommercialPage slug="deca-precio" />} />
+          <Route path="/deca-gratis" element={<CommercialPage slug="deca-gratis" />} />
+          <Route path="/deca-paqueteria" element={<CommercialPage slug="deca-paqueteria" />} />
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<SignupPage />} />
