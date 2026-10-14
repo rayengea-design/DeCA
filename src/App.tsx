@@ -22,6 +22,7 @@ const ProtectedRoute = lazy(() =>
 )
 const AdminPanelPage = lazy(() => import('@/pages/admin/AdminPanelPage').then((m) => ({ default: m.AdminPanelPage })))
 const BillingPage = lazy(() => import('@/pages/BillingPage').then((m) => ({ default: m.BillingPage })))
+const CommercialPage = lazy(() => import('@/pages/CommercialPage').then((m) => ({ default: m.CommercialPage })))
 const CompanySetupPage = lazy(() => import('@/pages/CompanySetupPage').then((m) => ({ default: m.CompanySetupPage })))
 const CorrectDecaPage = lazy(() => import('@/pages/CorrectDecaPage').then((m) => ({ default: m.CorrectDecaPage })))
 const GuardadosPage = lazy(() => import('@/pages/GuardadosPage').then((m) => ({ default: m.GuardadosPage })))
@@ -76,6 +77,11 @@ export default function App() {
               don't pull in the Firebase SDK and stay fast to load and crawl. */}
           <Route path="/guias" element={<GuidesIndexPage />} />
           <Route path="/guias/:slug" element={<GuideArticlePage />} />
+          {/* Commercial / transactional landing pages (buyer intent). Fixed
+              top-level slugs, each prerendered in vite.config.ts. */}
+          <Route path="/generar-deca" element={<CommercialPage slug="generar-deca" />} />
+          <Route path="/programa-deca" element={<CommercialPage slug="programa-deca" />} />
+          <Route path="/alternativa-simple-ministerio" element={<CommercialPage slug="alternativa-simple-ministerio" />} />
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<SignupPage />} />

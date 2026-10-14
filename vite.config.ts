@@ -3,6 +3,7 @@ import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { COMMERCIAL_PAGES, type CommercialPage } from './src/content/commercial.ts'
 import { GUIDES, GUIDES_ORG, type Guide } from './src/content/guides.ts'
 import {
   COMPARISON,
@@ -113,6 +114,59 @@ ${ctaHtml()}
 </main>`
 }
 
+/** Static HTML for a commercial landing page (/generar-deca, etc.), from the
+ * same content module the React CommercialPage renders. */
+function commercialBodyHtml(page: CommercialPage): string {
+  const sections = page.sections
+    .map((s) => {
+      const paras = (s.paragraphs ?? []).map((p) => `<p>${esc(p)}</p>`).join('\n')
+      const bullets = s.bullets?.length ? `<ul>${s.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : ''
+      return `<section><h2>${esc(s.heading)}</h2>\n${paras}\n${bullets}</section>`
+    })
+    .join('\n')
+  const faqs = page.faqs?.length
+    ? `<section><h2>Preguntas frecuentes</h2>${page.faqs
+        .map((f) => `<div><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>`)
+        .join('')}</section>`
+    : ''
+  return `${navHtml()}
+<main>
+<nav aria-label="Miga de pan"><a href="${SITE}/">Inicio</a> · ${esc(page.h1)}</nav>
+<article>
+<h1>${esc(page.h1)}</h1>
+<p>${esc(page.intro)}</p>
+<p><a href="${SITE}/registro">Empieza gratis</a> — 10 DeCA o 5 días gratis, sin tarjeta de crédito.</p>
+${sections}
+${midCtaHtml()}
+${faqs}
+</article>
+${ctaHtml()}
+</main>`
+}
+
+function commercialJsonLd(page: CommercialPage): string {
+  const graph: Record<string, unknown>[] = [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Inicio', item: `${SITE}/` },
+        { '@type': 'ListItem', position: 2, name: page.h1, item: `${SITE}/${page.slug}` },
+      ],
+    },
+  ]
+  if (page.faqs?.length) {
+    graph.push({
+      '@type': 'FAQPage',
+      mainEntity: page.faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    })
+  }
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph })
+}
+
 /** Static HTML of the whole marketing landing, built from the SAME content
  * module the React page renders (src/content/landing.ts), so crawlers and AI
  * assistants read the real H1, value props, pricing and the full FAQ without
@@ -160,7 +214,12 @@ function homeBodyHtml(): string {
 <section><h2>${esc(MID_CTA.h2)}</h2><p>${esc(MID_CTA.p)}</p><ul>${midBullets}</ul><a href="${SITE}/registro">Empieza gratis</a></section>
 <section id="faq"><h2>Preguntas frecuentes</h2>${faqs}</section>
 <section><h2>${esc(FINAL_CTA.h2)}</h2><p>${esc(FINAL_CTA.p)}</p><a href="${SITE}/registro">Empieza gratis</a><p>${esc(FINAL_CTA.note)}</p></section>
-<nav aria-label="Guías"><a href="${SITE}/guias">Guías sobre el DeCA</a></nav>
+<nav aria-label="Enlaces útiles">
+<a href="${SITE}/generar-deca">Generar el DeCA online</a>
+<a href="${SITE}/programa-deca">Programa para el DeCA</a>
+<a href="${SITE}/alternativa-simple-ministerio">Alternativa a SIMPLE del Ministerio</a>
+<a href="${SITE}/guias">Guías sobre el DeCA</a>
+</nav>
 </main>`
 }
 
@@ -283,6 +342,23 @@ function prerenderGuides(): Plugin {
         )
       }
 
+      // Commercial / transactional landing pages (top-level slugs)
+      for (const page of COMMERCIAL_PAGES) {
+        const dir = path.join(outDir, page.slug)
+        mkdirSync(dir, { recursive: true })
+        writeFileSync(
+          path.join(dir, 'index.html'),
+          renderPage(template, {
+            title: page.metaTitle,
+            description: page.description,
+            canonical: `${SITE}/${page.slug}`,
+            body: commercialBodyHtml(page),
+            jsonLd: commercialJsonLd(page),
+          }),
+          'utf-8',
+        )
+      }
+
       // Home (/): fill the otherwise-empty <div id="root"> of the built
       // index.html with the real landing content. Only the root is replaced —
       // all the existing <head> meta and JSON-LD in index.html stay as they are.
@@ -293,7 +369,9 @@ function prerenderGuides(): Plugin {
       )
 
       // eslint-disable-next-line no-console
-      console.log(`[prerender] home + ${GUIDES.length + 1} páginas de guías escritas en dist`)
+      console.log(
+        `[prerender] home + ${GUIDES.length + 1} guías + ${COMMERCIAL_PAGES.length} páginas comerciales escritas en dist`,
+      )
     },
   }
 }

@@ -446,6 +446,15 @@ export function LandingPage() {
           <div className="flex w-full flex-col items-center justify-between gap-4 sm:flex-row">
             <Logo />
             <nav className="flex flex-wrap items-center justify-center gap-4">
+              <Link to="/generar-deca" className="hover:text-ink-700">
+                Generar DeCA
+              </Link>
+              <Link to="/programa-deca" className="hover:text-ink-700">
+                Programa DeCA
+              </Link>
+              <Link to="/alternativa-simple-ministerio" className="hover:text-ink-700">
+                Alternativa a SIMPLE
+              </Link>
               <Link to="/guias" className="hover:text-ink-700">
                 Guías
               </Link>
