@@ -4,8 +4,33 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { GUIDES, GUIDES_ORG, type Guide } from './src/content/guides.ts'
+import {
+  COMPARISON,
+  FAQS,
+  FEATURES,
+  FEATURES_HEADING,
+  FINAL_CTA,
+  HERO,
+  heroBadge,
+  MID_CTA,
+  PLANS_MARKETING,
+  PRICING_HEADING,
+  PROBLEM,
+  SANCTION_TEXT,
+  SECURITY,
+  SOLUTION,
+  STEPS,
+  STEPS_HEADING,
+  TRUST_ITEMS,
+  USE_CASES,
+  USE_CASES_HEADING,
+} from './src/content/landing.ts'
 
 const SITE = 'https://www.kreanex.es'
+// Prefilled WhatsApp link for the Flota+ CTA. Mirrors WHATSAPP_CONTACT_URL in
+// src/lib/plans.ts, duplicated here because that module can't be imported from
+// the Node build config (it uses the '@' path alias). Keep the number in sync.
+const WHATSAPP_URL = 'https://wa.me/34600794114'
 
 function esc(s: string): string {
   return s
@@ -88,6 +113,57 @@ ${ctaHtml()}
 </main>`
 }
 
+/** Static HTML of the whole marketing landing, built from the SAME content
+ * module the React page renders (src/content/landing.ts), so crawlers and AI
+ * assistants read the real H1, value props, pricing and the full FAQ without
+ * running JavaScript. The SPA mounts over it for real users. */
+function homeBodyHtml(): string {
+  const trust = TRUST_ITEMS.map((t) => `<li>${esc(t.text)}</li>`).join('')
+  const comparisonRows = COMPARISON.map(
+    (r) =>
+      `<tr><th scope="row">${esc(r.item)}</th><td>SIMPLE (Ministerio): ${esc(r.simple)}</td><td>DeCA: ${esc(r.deca)}</td></tr>`,
+  ).join('')
+  const features = FEATURES.map((f) => `<div><h3>${esc(f.title)}</h3><p>${esc(f.description)}</p></div>`).join('')
+  const steps = STEPS.map((s) => `<li><strong>${esc(s.title)}.</strong> ${esc(s.body)}</li>`).join('')
+  const useCases = USE_CASES.map((u) => `<div><h3>${esc(u.title)}</h3><p>${esc(u.body)}</p></div>`).join('')
+  const securityBullets = SECURITY.bullets.map((b) => `<li>${esc(b)}</li>`).join('')
+  const plans = PLANS_MARKETING.map((p) => {
+    const href = p.hrefKind === 'whatsapp' ? WHATSAPP_URL : `${SITE}/registro`
+    const feats = p.features.map((f) => `<li>${esc(f)}</li>`).join('')
+    const price = `${esc(p.price)}${p.period ? esc(p.period) : ''}`
+    return `<div><h3>${esc(p.name)} — ${price}</h3><p>${esc(p.description)}</p><ul>${feats}</ul><a href="${href}">${esc(p.cta)}</a></div>`
+  }).join('')
+  const faqs = FAQS.map((f) => `<div><h3>${esc(f.q)}</h3><p>${esc(f.a)}</p></div>`).join('')
+  const midBullets = MID_CTA.bullets.map((b) => `<li>${esc(b)}</li>`).join('')
+
+  return `${navHtml()}
+<main>
+<section>
+<p>${esc(heroBadge())}</p>
+<h1>${esc(HERO.h1)}</h1>
+<p>${esc(HERO.subtitle)}</p>
+<a href="${SITE}/registro">Empieza gratis</a> <a href="${SITE}/#precios">Ver precios</a>
+<p>${esc(HERO.note)}</p>
+</section>
+<section aria-label="Garantías"><ul>${trust}</ul></section>
+<section><p>${esc(SANCTION_TEXT)}</p></section>
+<section>
+<div><h2>${esc(PROBLEM.h2)}</h2><p>${esc(PROBLEM.p)}</p></div>
+<div><h2>${esc(SOLUTION.h2)}</h2><p>${esc(SOLUTION.p)}</p></div>
+<table><thead><tr><th></th><th>SIMPLE (Ministerio)</th><th>DeCA</th></tr></thead><tbody>${comparisonRows}</tbody></table>
+</section>
+<section id="funciones"><h2>${esc(FEATURES_HEADING.h2)}</h2><p>${esc(FEATURES_HEADING.sub)}</p>${features}</section>
+<section><h2>${esc(STEPS_HEADING.h2)}</h2><p>${esc(STEPS_HEADING.sub)}</p><ol>${steps}</ol></section>
+<section id="para-quien"><h2>${esc(USE_CASES_HEADING.h2)}</h2><p>${esc(USE_CASES_HEADING.sub)}</p>${useCases}</section>
+<section><h2>${esc(SECURITY.h2)}</h2><p>${esc(SECURITY.p)}</p><ul>${securityBullets}</ul></section>
+<section id="precios"><h2>${esc(PRICING_HEADING.h2)}</h2><p>${esc(PRICING_HEADING.sub)}</p><p>${esc(PRICING_HEADING.note)}</p>${plans}</section>
+<section><h2>${esc(MID_CTA.h2)}</h2><p>${esc(MID_CTA.p)}</p><ul>${midBullets}</ul><a href="${SITE}/registro">Empieza gratis</a></section>
+<section id="faq"><h2>Preguntas frecuentes</h2>${faqs}</section>
+<section><h2>${esc(FINAL_CTA.h2)}</h2><p>${esc(FINAL_CTA.p)}</p><a href="${SITE}/registro">Empieza gratis</a><p>${esc(FINAL_CTA.note)}</p></section>
+<nav aria-label="Guías"><a href="${SITE}/guias">Guías sobre el DeCA</a></nav>
+</main>`
+}
+
 function guideJsonLd(guide: Guide): string {
   const graph: unknown[] = [
     {
@@ -160,16 +236,19 @@ function renderPage(
   return html
 }
 
-/** Build-time prerender of the marketing guides: writes real static HTML for
- * /guias and every /guias/<slug> into dist, so Google, ChatGPT, Perplexity and
- * WhatsApp link previews get full content without executing JavaScript. The
- * SPA still hydrates over it for real users navigating client-side. */
+/** Build-time prerender of the marketing pages: writes real static HTML for the
+ * home (/), /guias and every /guias/<slug> into dist, so Google, ChatGPT,
+ * Perplexity and WhatsApp link previews get full content without executing
+ * JavaScript. The SPA still mounts over it for real users navigating
+ * client-side. */
 function prerenderGuides(): Plugin {
   return {
     name: 'prerender-guides',
     apply: 'build',
     closeBundle() {
       const outDir = path.resolve(import.meta.dirname, 'dist')
+      // Captured once, with the root still empty, BEFORE any injection below —
+      // every page (home and guides) is rendered from this clean template.
       const template = readFileSync(path.join(outDir, 'index.html'), 'utf-8')
 
       // Guides index
@@ -204,8 +283,17 @@ function prerenderGuides(): Plugin {
         )
       }
 
+      // Home (/): fill the otherwise-empty <div id="root"> of the built
+      // index.html with the real landing content. Only the root is replaced —
+      // all the existing <head> meta and JSON-LD in index.html stay as they are.
+      writeFileSync(
+        path.join(outDir, 'index.html'),
+        template.replace('<div id="root"></div>', `<div id="root">${homeBodyHtml()}</div>`),
+        'utf-8',
+      )
+
       // eslint-disable-next-line no-console
-      console.log(`[prerender-guides] ${GUIDES.length + 1} static pages written to dist/guias`)
+      console.log(`[prerender] home + ${GUIDES.length + 1} páginas de guías escritas en dist`)
     },
   }
 }

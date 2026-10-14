@@ -16,196 +16,62 @@ import {
   User,
   Users,
   XCircle,
+  type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/Logo'
 import { MarketingHeader } from '@/components/layout/MarketingHeader'
 import { Button } from '@/components/ui/Button'
+import {
+  COMPARISON,
+  daysUntilMandatory,
+  FAQS,
+  FEATURES,
+  FEATURES_HEADING,
+  FINAL_CTA,
+  HERO,
+  heroBadge,
+  type IconName,
+  isMandatoryYet,
+  MID_CTA,
+  PLANS_MARKETING,
+  PRICING_HEADING,
+  PROBLEM,
+  SANCTION_TEXT,
+  SECURITY,
+  SOLUTION,
+  STEPS,
+  STEPS_HEADING,
+  TRUST_ITEMS,
+  USE_CASES,
+  USE_CASES_HEADING,
+} from '@/content/landing'
 import { WHATSAPP_CONTACT_URL } from '@/lib/plans'
 import { cn } from '@/lib/utils'
 
-const DECA_MANDATORY_DATE = new Date('2026-10-05T00:00:00')
-const isMandatoryYet = Date.now() >= DECA_MANDATORY_DATE.getTime()
-const daysUntilMandatory = Math.max(0, Math.ceil((DECA_MANDATORY_DATE.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
-
-const features = [
-  {
-    icon: QrCode,
-    title: 'PDF con QR en segundos',
-    description: 'Rellenas el porte y descargas el DeCA oficial con su código QR de verificación al instante.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Cumplimiento normativo verificado',
-    description: 'Cada campo exigido por la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026, sin dejar huecos.',
-  },
-  {
-    icon: Users,
-    title: 'Un acceso por conductor',
-    description: 'Cada conductor genera y ve solo sus DeCA. Tú, como gestor de flota, los ves todos desde un panel.',
-  },
-  {
-    icon: History,
-    title: 'Corrección sin perder trazabilidad',
-    description: 'Si un dato cambia, emites una corrección enlazada al documento original, tal y como exige la ley.',
-  },
-  {
-    icon: Bookmark,
-    title: 'Rutas y contrapartes guardadas',
-    description: 'Guarda las combinaciones habituales de cargador, mercancía y ruta y rellena el siguiente porte en segundos.',
-  },
-  {
-    icon: Download,
-    title: 'Historial y exportación a CSV',
-    description: 'Busca por matrícula o fecha y exporta el histórico completo para tu gestoría o una inspección.',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Envío por WhatsApp',
-    description: 'Comparte el PDF real con el conductor o el cargador con un solo toque, sin descargar nada a mano.',
-  },
-  {
-    icon: Smartphone,
-    title: 'Funciona en el móvil, sin cobertura',
-    description: 'Se instala como una app (PWA) y sigue funcionando aunque la conexión falle en carretera.',
-  },
-  {
-    icon: Lock,
-    title: 'Cada empresa, sus propios datos',
-    description: 'Aislamiento de datos por empresa a nivel de base de datos: ni conductores ni clientes de otras cuentas pueden verlos.',
-  },
-  {
-    icon: CreditCard,
-    title: 'Factura automática con IVA',
-    description: 'Cada cobro genera su factura y se envía sola a tu email, con el IVA calculado y desglosado.',
-  },
-]
-
-const comparison = [
-  { item: 'Tiempo por documento', simple: 'Formulario largo cada vez', deca: 'Menos de un minuto' },
-  { item: 'Historial por empresa', simple: 'No', deca: 'Sí, buscable y exportable' },
-  { item: 'Pensado para el móvil', simple: 'No', deca: 'Sí, funciona sin cobertura' },
-  { item: 'Varios conductores', simple: 'Una sesión para todos', deca: 'Acceso individual por conductor' },
-  { item: 'Corrección de errores', simple: 'Manual, sin trazabilidad', deca: 'Un clic, enlazada al original' },
-  { item: 'Envío al momento', simple: 'Descargar y adjuntar a mano', deca: 'Un toque por WhatsApp' },
-]
-
-interface PricingPlan {
-  name: string
-  price: string
-  period?: string
-  description: string
-  features: string[]
-  cta: string
-  href: string
-  highlighted?: boolean
+// Resolves the icon names stored in the (React-free) landing content module to
+// actual lucide components for rendering.
+const ICONS: Record<IconName, LucideIcon> = {
+  QrCode,
+  ShieldCheck,
+  Users,
+  History,
+  Bookmark,
+  Download,
+  MessageCircle,
+  Smartphone,
+  Lock,
+  CreditCard,
+  User,
+  Truck,
+  Building2,
+  Server,
 }
 
-const plans: PricingPlan[] = [
-  {
-    name: 'Básico',
-    price: '5€',
-    period: '/mes',
-    description: 'Para autónomos y flotas pequeñas que empiezan con el DeCA.',
-    features: ['Hasta 3 conductores', 'DeCA ilimitados', 'Historial y exportación CSV', 'Envío por WhatsApp'],
-    cta: 'Empezar prueba gratis',
-    href: '/registro',
-  },
-  {
-    name: 'Flota',
-    price: '25€',
-    period: '/mes',
-    description: 'Para empresas de transporte con varios conductores en ruta.',
-    features: [
-      'Hasta 10 conductores',
-      'Todo lo del plan Básico',
-      'Corrección de documentos',
-      'Soporte prioritario',
-    ],
-    cta: 'Empezar prueba gratis',
-    href: '/registro',
-    highlighted: true,
-  },
-  {
-    name: 'Empresa',
-    price: '75€',
-    period: '/mes',
-    description: 'Para grupos de transporte con varios equipos y muchos conductores.',
-    features: ['Hasta 50 conductores', 'Todo lo del plan Flota', 'Soporte prioritario'],
-    cta: 'Empezar prueba gratis',
-    href: '/registro',
-  },
-  {
-    name: 'Flota+',
-    price: 'A medida',
-    description: 'Para grupos logísticos con más de 50 conductores o necesidades propias.',
-    features: ['Conductores ilimitados', 'Facturación a medida', 'Alta asistida del equipo', 'SLA dedicado'],
-    cta: 'Hablar con nosotros',
-    href: WHATSAPP_CONTACT_URL,
-  },
-]
-
-const useCases = [
-  {
-    icon: User,
-    title: 'Autónomo con vehículo propio',
-    body: 'Generas tu DeCA desde el móvil antes de cada porte, sin depender de nadie ni de un ordenador en la oficina. Plan Básico.',
-  },
-  {
-    icon: Truck,
-    title: 'Flota pequeña o mediana',
-    body: 'Cada conductor tiene su propio acceso, tú ves todos los documentos de la empresa desde un solo panel y corriges lo que haga falta. Plan Flota.',
-  },
-  {
-    icon: Building2,
-    title: 'Grupo logístico con varios equipos',
-    body: 'Decenas de conductores, varios administradores, soporte prioritario y, a partir de 50 conductores, condiciones a medida. Plan Empresa o Flota+.',
-  },
-]
-
-const faqs = [
-  {
-    q: '¿Qué es el DeCA y por qué es obligatorio?',
-    a: 'El Documento electrónico de Control Administrativo (DeCA) es el documento que deben llevar los transportes nacionales de mercancías por carretera en España, según la Orden FOM/2861/2012 y la Resolución de 5 de junio de 2026. Desde el 5 de octubre de 2026 es obligatorio en cada porte.',
-  },
-  {
-    q: '¿Qué pasa si no lo llevo?',
-    a: 'No llevarlo, o llevarlo mal cumplimentado, puede suponer una sanción de entre 401€ y 20.000€ según la infracción.',
-  },
-  {
-    q: '¿Cada conductor necesita su propia cuenta?',
-    a: 'Sí, y es lo recomendable: das de alta a cada conductor con su acceso, cada uno genera y ve solo sus propios DeCA, y tú ves los de toda la empresa.',
-  },
-  {
-    q: '¿Puedo cancelar cuando quiera?',
-    a: 'Sí. Gestionas tu suscripción, cambias de plan o cancelas desde tu propio panel, sin llamadas ni permanencia. Si cancelas, mantienes acceso hasta el final del periodo ya pagado.',
-  },
-  {
-    q: '¿Necesito instalar algo?',
-    a: 'No. Funciona desde el navegador del móvil o el ordenador, y se puede añadir a la pantalla de inicio como una app (PWA) que sigue funcionando sin cobertura.',
-  },
-  {
-    q: '¿Puedo cambiar de plan más adelante?',
-    a: 'Sí, en cualquier momento desde Facturación. El cambio se aplica al final de tu periodo actual: sigues en tu plan de ahora hasta entonces y solo se te cobra la nueva cuota cuando toca renovar.',
-  },
-  {
-    q: '¿Qué pasa con mis DeCA si dejo de pagar?',
-    a: 'Todos los documentos ya generados se conservan y siguen siendo descargables — es una obligación legal de conservación de 1 año, no depende de tu suscripción. Lo que se detiene es poder generar DeCA nuevos.',
-  },
-  {
-    q: '¿Cómo se calcula y se cobra el IVA?',
-    a: 'El precio de cada plan no incluye IVA — se calcula y se muestra desglosado en el momento del pago, y cada cobro genera automáticamente su factura, que recibes por email.',
-  },
-  {
-    q: '¿Es seguro? ¿Quién ve mis datos?',
-    a: 'Los datos de cada empresa están aislados a nivel de base de datos: nadie de otra empresa cliente puede acceder a ellos. Los pagos los procesa Stripe directamente — DeCA no almacena ni ve los datos de tu tarjeta.',
-  },
-  {
-    q: '¿El QR del DeCA es el mismo que pide un inspector?',
-    a: 'Sí. El PDF que genera DeCA incluye el código QR de verificación exigido por la normativa, con todos los campos obligatorios cumplimentados.',
-  },
-]
+function planHref(hrefKind: 'registro' | 'whatsapp'): string {
+  return hrefKind === 'whatsapp' ? WHATSAPP_CONTACT_URL : '/registro'
+}
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false)
@@ -231,6 +97,9 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 export function LandingPage() {
+  const mandatory = isMandatoryYet()
+  const days = daysUntilMandatory()
+
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
@@ -242,19 +111,12 @@ export function LandingPage() {
         <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="flex flex-col items-start gap-6">
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-300">
-              {isMandatoryYet
-                ? 'Ya es obligatorio desde el 5 de octubre de 2026'
-                : daysUntilMandatory <= 30
-                  ? `Obligatorio en ${daysUntilMandatory} ${daysUntilMandatory === 1 ? 'día' : 'días'} (5 de octubre de 2026)`
-                  : 'Obligatorio desde el 5 de octubre de 2026'}
+              {heroBadge()}
             </span>
             <h1 className="max-w-2xl font-heading text-4xl font-extrabold leading-tight text-white sm:text-5xl">
-              Genera el DeCA de cada porte en menos de un minuto
+              {HERO.h1}
             </h1>
-            <p className="max-w-xl text-lg text-ink-200">
-              El Documento electrónico de Control Administrativo, sin rellenar formularios largos en la web del
-              Ministerio. PDF oficial con QR, cumplimiento verificado y todo el equipo desde el móvil.
-            </p>
+            <p className="max-w-xl text-lg text-ink-200">{HERO.subtitle}</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
                 <Link to="/registro">Empieza gratis</Link>
@@ -263,7 +125,7 @@ export function LandingPage() {
                 <a href="#precios">Ver precios</a>
               </Button>
             </div>
-            <p className="text-sm text-ink-400">10 DeCA o 5 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
+            <p className="text-sm text-ink-400">{HERO.note}</p>
           </div>
 
           {/* Product mockup — an illustrated preview of the actual PDF a DeCA
@@ -310,22 +172,15 @@ export function LandingPage() {
       {/* Trust bar */}
       <section className="border-b border-ink-100 bg-white">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 text-center text-xs font-medium text-ink-500 sm:grid-cols-4 sm:px-6">
-          <div className="flex flex-col items-center gap-1.5">
-            <ShieldCheck className="h-5 w-5 text-brand-500" />
-            Conforme a la Orden FOM/2861/2012
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <Lock className="h-5 w-5 text-brand-500" />
-            Datos de cada empresa aislados
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <CreditCard className="h-5 w-5 text-brand-500" />
-            Pagos y factura vía Stripe
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <Server className="h-5 w-5 text-brand-500" />
-            Alojado en Google Cloud
-          </div>
+          {TRUST_ITEMS.map((t) => {
+            const Icon = ICONS[t.icon]
+            return (
+              <div key={t.text} className="flex flex-col items-center gap-1.5">
+                <Icon className="h-5 w-5 text-brand-500" />
+                {t.text}
+              </div>
+            )
+          })}
         </div>
       </section>
 
@@ -333,9 +188,7 @@ export function LandingPage() {
       <section className="border-b border-ink-100 bg-brand-50">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-4 text-center sm:flex-row sm:justify-center sm:gap-3 sm:px-6">
           <ShieldCheck className="h-5 w-5 shrink-0 text-brand-600" />
-          <p className="text-sm font-medium text-brand-700">
-            No llevar el DeCA en regla puede suponer una sanción de entre 401€ y 20.000€ por infracción.
-          </p>
+          <p className="text-sm font-medium text-brand-700">{SANCTION_TEXT}</p>
         </div>
       </section>
 
@@ -343,19 +196,12 @@ export function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="grid gap-10 md:grid-cols-2">
           <div>
-            <h2 className="font-heading text-2xl font-bold text-ink-900">Las herramientas oficiales no están pensadas para tu día a día</h2>
-            <p className="mt-3 text-ink-500">
-              La web "SIMPLE" del Ministerio obliga a rellenar formularios largos cada vez, no guarda un historial
-              ordenado por empresa y no está pensada para que la use un conductor desde el móvil en el momento de
-              cargar.
-            </p>
+            <h2 className="font-heading text-2xl font-bold text-ink-900">{PROBLEM.h2}</h2>
+            <p className="mt-3 text-ink-500">{PROBLEM.p}</p>
           </div>
           <div>
-            <h2 className="font-heading text-2xl font-bold text-ink-900">DeCA hace el mismo trámite en un minuto</h2>
-            <p className="mt-3 text-ink-500">
-              Genera el documento oficial, con su código QR de verificación, cumpliendo al 100% con la normativa
-              vigente. Sin papeleo, sin dobles formularios, sin dudas de si está bien hecho.
-            </p>
+            <h2 className="font-heading text-2xl font-bold text-ink-900">{SOLUTION.h2}</h2>
+            <p className="mt-3 text-ink-500">{SOLUTION.p}</p>
           </div>
         </div>
 
@@ -369,7 +215,7 @@ export function LandingPage() {
               </tr>
             </thead>
             <tbody>
-              {comparison.map((row) => (
+              {COMPARISON.map((row) => (
                 <tr key={row.item} className="border-t border-ink-100">
                   <td className="px-5 py-3.5 font-medium text-ink-900">{row.item}</td>
                   <td className="px-5 py-3.5 text-ink-500">
@@ -395,19 +241,22 @@ export function LandingPage() {
       <section id="funciones" className="border-y border-ink-100 bg-ink-50 py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold text-ink-900">Todo lo que necesita tu flota</h2>
-            <p className="mt-2 text-ink-500">Una sola herramienta para generar, corregir y compartir cada DeCA.</p>
+            <h2 className="font-heading text-3xl font-bold text-ink-900">{FEATURES_HEADING.h2}</h2>
+            <p className="mt-2 text-ink-500">{FEATURES_HEADING.sub}</p>
           </div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((f) => (
-              <div key={f.title} className="rounded-lg border border-ink-100 bg-white p-5">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-brand-50 text-brand-600">
-                  <f.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-semibold text-ink-900">{f.title}</h3>
-                <p className="mt-1.5 text-sm text-ink-500">{f.description}</p>
-              </div>
-            ))}
+            {FEATURES.map((f) => {
+              const Icon = ICONS[f.icon]
+              return (
+                <div key={f.title} className="rounded-lg border border-ink-100 bg-white p-5">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-brand-50 text-brand-600">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 font-semibold text-ink-900">{f.title}</h3>
+                  <p className="mt-1.5 text-sm text-ink-500">{f.description}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -415,19 +264,11 @@ export function LandingPage() {
       {/* How it works */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-heading text-3xl font-bold text-ink-900">Cómo funciona</h2>
-          <p className="mt-2 text-ink-500">De cero a tu primer DeCA en menos de dos minutos.</p>
+          <h2 className="font-heading text-3xl font-bold text-ink-900">{STEPS_HEADING.h2}</h2>
+          <p className="mt-2 text-ink-500">{STEPS_HEADING.sub}</p>
         </div>
         <div className="mt-10 grid gap-8 sm:grid-cols-3">
-          {[
-            {
-              step: '1',
-              title: 'Rellena el porte',
-              body: 'Origen, destino, mercancía, matrículas, cargador y transportista. Si lo has hecho antes, usa una ruta o contraparte guardada.',
-            },
-            { step: '2', title: 'Genera el DeCA', body: 'El PDF oficial con QR se crea al instante, listo para descargar.' },
-            { step: '3', title: 'Compártelo', body: 'Envíalo por WhatsApp o que el conductor lo lleve desde el móvil, con o sin cobertura.' },
-          ].map((s) => (
+          {STEPS.map((s) => (
             <div key={s.step} className="text-center">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-ink-900 font-heading text-lg font-bold text-white">
                 {s.step}
@@ -443,19 +284,22 @@ export function LandingPage() {
       <section id="para-quien" className="border-y border-ink-100 bg-ink-50 py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold text-ink-900">Para quién es DeCA</h2>
-            <p className="mt-2 text-ink-500">Del autónomo con una furgoneta al grupo logístico con varios equipos.</p>
+            <h2 className="font-heading text-3xl font-bold text-ink-900">{USE_CASES_HEADING.h2}</h2>
+            <p className="mt-2 text-ink-500">{USE_CASES_HEADING.sub}</p>
           </div>
           <div className="mt-10 grid gap-6 sm:grid-cols-3">
-            {useCases.map((u) => (
-              <div key={u.title} className="rounded-xl border border-ink-100 bg-white p-6">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-brand-50 text-brand-600">
-                  <u.icon className="h-5 w-5" />
-                </span>
-                <h3 className="mt-4 font-semibold text-ink-900">{u.title}</h3>
-                <p className="mt-1.5 text-sm text-ink-500">{u.body}</p>
-              </div>
-            ))}
+            {USE_CASES.map((u) => {
+              const Icon = ICONS[u.icon]
+              return (
+                <div key={u.title} className="rounded-xl border border-ink-100 bg-white p-6">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-brand-50 text-brand-600">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 font-semibold text-ink-900">{u.title}</h3>
+                  <p className="mt-1.5 text-sm text-ink-500">{u.body}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -464,24 +308,20 @@ export function LandingPage() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>
-            <h2 className="font-heading text-3xl font-bold text-ink-900">Tus datos, solo tuyos</h2>
-            <p className="mt-3 text-ink-500">
-              Cada empresa cliente tiene sus datos completamente aislados: ni otros clientes de DeCA ni sus
-              conductores pueden acceder a información que no sea la suya. Los pagos los procesa Stripe directamente
-              con tu tarjeta — DeCA nunca almacena esos datos en sus propios sistemas.
-            </p>
+            <h2 className="font-heading text-3xl font-bold text-ink-900">{SECURITY.h2}</h2>
+            <p className="mt-3 text-ink-500">{SECURITY.p}</p>
             <ul className="mt-5 flex flex-col gap-3 text-sm text-ink-600">
               <li className="flex items-start gap-2">
                 <FileCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                Conservación de cada DeCA durante el plazo legal de 1 año, incluso si cancelas.
+                {SECURITY.bullets[0]}
               </li>
               <li className="flex items-start gap-2">
                 <Lock className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                Control de acceso por empresa a nivel de base de datos, no solo en la pantalla.
+                {SECURITY.bullets[1]}
               </li>
               <li className="flex items-start gap-2">
                 <Server className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                Infraestructura sobre Google Cloud (Firebase) y Vercel.
+                {SECURITY.bullets[2]}
               </li>
             </ul>
           </div>
@@ -499,49 +339,52 @@ export function LandingPage() {
       <section id="precios" className="border-t border-ink-100 bg-ink-50 py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-heading text-3xl font-bold text-ink-900">Precios simples, sin sorpresas</h2>
-            <p className="mt-2 text-ink-500">10 DeCA o 5 días de prueba gratis en cualquier plan. Sin tarjeta de crédito.</p>
-            <p className="mt-1 text-xs text-ink-400">El IVA correspondiente se calcula y se muestra desglosado en el momento del pago.</p>
+            <h2 className="font-heading text-3xl font-bold text-ink-900">{PRICING_HEADING.h2}</h2>
+            <p className="mt-2 text-ink-500">{PRICING_HEADING.sub}</p>
+            <p className="mt-1 text-xs text-ink-400">{PRICING_HEADING.note}</p>
           </div>
           <div className="mt-10 grid gap-6 lg:grid-cols-4">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={cn(
-                  'flex flex-col rounded-xl border bg-white p-6',
-                  plan.highlighted ? 'border-brand-500 shadow-lg ring-1 ring-brand-500' : 'border-ink-100 shadow-sm',
-                )}
-              >
-                {plan.highlighted && (
-                  <span className="mb-3 inline-flex w-fit items-center rounded-full bg-brand-500 px-2.5 py-0.5 text-xs font-semibold text-white">
-                    Más popular
-                  </span>
-                )}
-                <h3 className="font-heading text-xl font-bold text-ink-900">{plan.name}</h3>
-                <p className="mt-1 text-sm text-ink-500">{plan.description}</p>
-                <p className="mt-5 flex items-baseline gap-1">
-                  <span className="font-heading text-3xl font-extrabold text-ink-900">{plan.price}</span>
-                  {plan.period && <span className="text-sm text-ink-400">{plan.period}</span>}
-                </p>
-                <ul className="mt-5 flex flex-1 flex-col gap-2.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-ink-600">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button asChild className="mt-6" variant={plan.highlighted ? 'default' : 'outline'}>
-                  {plan.href.startsWith('mailto:') || plan.href.startsWith('http') ? (
-                    <a href={plan.href} target={plan.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
-                      {plan.cta}
-                    </a>
-                  ) : (
-                    <Link to={plan.href}>{plan.cta}</Link>
+            {PLANS_MARKETING.map((plan) => {
+              const href = planHref(plan.hrefKind)
+              return (
+                <div
+                  key={plan.name}
+                  className={cn(
+                    'flex flex-col rounded-xl border bg-white p-6',
+                    plan.highlighted ? 'border-brand-500 shadow-lg ring-1 ring-brand-500' : 'border-ink-100 shadow-sm',
                   )}
-                </Button>
-              </div>
-            ))}
+                >
+                  {plan.highlighted && (
+                    <span className="mb-3 inline-flex w-fit items-center rounded-full bg-brand-500 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      Más popular
+                    </span>
+                  )}
+                  <h3 className="font-heading text-xl font-bold text-ink-900">{plan.name}</h3>
+                  <p className="mt-1 text-sm text-ink-500">{plan.description}</p>
+                  <p className="mt-5 flex items-baseline gap-1">
+                    <span className="font-heading text-3xl font-extrabold text-ink-900">{plan.price}</span>
+                    {plan.period && <span className="text-sm text-ink-400">{plan.period}</span>}
+                  </p>
+                  <ul className="mt-5 flex flex-1 flex-col gap-2.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-ink-600">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button asChild className="mt-6" variant={plan.highlighted ? 'default' : 'outline'}>
+                    {href.startsWith('http') ? (
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {plan.cta}
+                      </a>
+                    ) : (
+                      <Link to={href}>{plan.cta}</Link>
+                    )}
+                  </Button>
+                </div>
+              )
+            })}
           </div>
           <p className="mt-6 text-center text-xs text-ink-400">
             Cambia de plan cuando quieras: el nuevo precio se aplica en tu siguiente renovación, sin cobros
@@ -553,23 +396,15 @@ export function LandingPage() {
       {/* Mid-page CTA */}
       <section className="border-b border-ink-100 bg-white">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-4 px-4 py-14 text-center sm:px-6">
-          <h2 className="font-heading text-2xl font-bold text-ink-900">¿Aún rellenando el formulario del Ministerio a mano?</h2>
-          <p className="max-w-lg text-ink-500">
-            Prueba DeCA gratis con tus propios portes: 10 documentos o 5 días, sin tarjeta de crédito.
-          </p>
+          <h2 className="font-heading text-2xl font-bold text-ink-900">{MID_CTA.h2}</h2>
+          <p className="max-w-lg text-ink-500">{MID_CTA.p}</p>
           <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-500">
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-brand-500" />
-              Alta en menos de 2 minutos
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-brand-500" />
-              Sin tarjeta de crédito
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-brand-500" />
-              Sin permanencia, cancela cuando quieras
-            </li>
+            {MID_CTA.bullets.map((b) => (
+              <li key={b} className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-brand-500" />
+                {b}
+              </li>
+            ))}
           </ul>
           <Button asChild size="lg">
             <Link to="/registro">Empieza gratis</Link>
@@ -581,7 +416,7 @@ export function LandingPage() {
       <section id="faq" className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <h2 className="text-center font-heading text-3xl font-bold text-ink-900">Preguntas frecuentes</h2>
         <div className="mt-8">
-          {faqs.map((f) => (
+          {FAQS.map((f) => (
             <FaqItem key={f.q} q={f.q} a={f.a} />
           ))}
         </div>
@@ -591,19 +426,17 @@ export function LandingPage() {
       <section className="relative overflow-hidden bg-ink-900">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(192,9,14,0.3),_transparent_55%)]" />
         <div className="relative mx-auto flex max-w-4xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-6">
-          {!isMandatoryYet && daysUntilMandatory <= 30 && (
+          {!mandatory && days <= 30 && (
             <span className="inline-flex items-center gap-2 rounded-full bg-brand-500/15 px-3 py-1 text-xs font-semibold text-brand-300">
-              Quedan {daysUntilMandatory} {daysUntilMandatory === 1 ? 'día' : 'días'} para que sea obligatorio
+              Quedan {days} {days === 1 ? 'día' : 'días'} para que sea obligatorio
             </span>
           )}
-          <h2 className="font-heading text-3xl font-bold text-white">Empieza a generar tus DeCA hoy</h2>
-          <p className="max-w-xl text-ink-300">
-            Da de alta tu empresa en menos de dos minutos y ten tu primer DeCA listo antes de terminar el café.
-          </p>
+          <h2 className="font-heading text-3xl font-bold text-white">{FINAL_CTA.h2}</h2>
+          <p className="max-w-xl text-ink-300">{FINAL_CTA.p}</p>
           <Button asChild size="lg">
             <Link to="/registro">Empieza gratis</Link>
           </Button>
-          <p className="text-xs text-ink-400">10 DeCA o 5 días gratis · Sin tarjeta de crédito · Cancela cuando quieras</p>
+          <p className="text-xs text-ink-400">{FINAL_CTA.note}</p>
         </div>
       </section>
 
